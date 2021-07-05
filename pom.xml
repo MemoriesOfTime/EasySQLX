@@ -29,11 +29,14 @@
                 <enabled>true</enabled>
             </snapshots>
         </repository>
-        <repository>
-            <id>repo-lanink-cn</id>
-            <url>https://repo.lanink.cn/</url>
-        </repository>
     </repositories>
+
+    <distributionManagement>
+        <repository>
+            <id>maven-repo</id>
+            <url>file:/www/wwwroot/repo.lanink.cn</url>
+        </repository>
+    </distributionManagement>
 
     <dependencies>
         <dependency>

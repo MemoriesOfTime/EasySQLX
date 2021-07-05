@@ -418,8 +418,8 @@ public class SqlDataManager {
     public boolean insertData(SqlData data,String tableName){
         String column = data.getColumnToString();
         String values = data.getObjectToString();
-        String sql = "INSERT INTO "+tableName+" ("+ column +") VALUES ("+ values +")";
-        return runSql(sql);
+        String sql = "INSERT INTO "+tableName+" ("+column+") VALUES (?)";
+        return runSql(sql,new ChunkSqlType(1,values));
     }
 
 

@@ -124,7 +124,6 @@ public abstract class AbstractOperation {
             resultSet = this.preparedStatement.executeQuery();
             if (resultSet != null) {
                 if (resultSet.next()) {
-
                     i = resultSet.getInt(1);
                 }
             }

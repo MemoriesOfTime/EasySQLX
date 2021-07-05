@@ -7,43 +7,40 @@ import java.util.LinkedList;
 /**
  * @author SmallasWater
  */
-public class SqlDataList<T extends SqlData> extends LinkedList<T>{
+public class SqlDataList<T extends SqlData> extends LinkedList<T> {
 
     private final String sql;
 
     private final ChunkSqlType[] types;
 
 
-    public SqlDataList(String sql,ChunkSqlType... types) {
+    public SqlDataList(String sql, ChunkSqlType... types) {
         this.types = types;
         this.sql = sql;
     }
 
     /**
      * 获取同一字段全部数据
-     * */
-    public LinkedList<Object> getValueList(String column){
+     */
+    public LinkedList<Object> getValueList(String column) {
         LinkedList<Object> objects = new LinkedList<>();
-        for(SqlData data:this){
-            objects.add(data.get(column.toLowerCase(),null));
+        for (SqlData data : this) {
+            objects.add(data.get(column.toLowerCase(), null));
         }
         return objects;
     }
 
 
-
-
-    public SqlData get(){
-        if(size() == 0){
-            return new SqlData("","");
+    public SqlData get() {
+        if (size() == 0) {
+            return new SqlData("", "");
         }
         return getFirst();
     }
 
 
-
     public String getSql() {
-       return replace(sql,types);
+        return replace(sql, types);
     }
 
     private String replace(String s, ChunkSqlType... args) {

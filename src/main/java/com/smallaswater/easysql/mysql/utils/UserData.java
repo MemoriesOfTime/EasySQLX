@@ -2,6 +2,7 @@ package com.smallaswater.easysql.mysql.utils;
 
 /**
  * 数据库用户信息
+ *
  * @author SmallasWater
  */
 public class UserData {
@@ -17,8 +18,7 @@ public class UserData {
     private final String database;
 
 
-
-    public UserData(String user,String passWorld,String host,int port,String database){
+    public UserData(String user, String passWorld, String host, int port, String database) {
         this.host = host;
         this.port = port;
         this.user = user;

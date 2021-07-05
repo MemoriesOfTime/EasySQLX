@@ -10,11 +10,11 @@ import java.util.List;
 
 /**
  * 缓存 数据库对象
+ *
  * @author 若水
  */
 public class PluginManager {
     private static final HashMap<Plugin, BaseMySql> CONNECTION = new HashMap<>();
-
 
 
     public PluginManager() {

@@ -7,6 +7,7 @@ import com.smallaswater.easysql.mysql.utils.UserData;
 
 /**
  * 根据表名使用数据库
+ *
  * @author SmallasWater
  */
 public class UseTableSqlManager extends BaseMySql {

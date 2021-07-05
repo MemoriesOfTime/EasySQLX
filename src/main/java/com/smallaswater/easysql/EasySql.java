@@ -23,8 +23,8 @@ public class EasySql extends PluginBase {
         this.getLogger().info("已加载 EasyMySQL 插件 v"+this.getDescription().getVersion());
     }
 
-    public static LoginPool getLoginPool(UserData data){
-        LoginPool pool = new LoginPool(data.getHost(),data.getUser(),data.getDatabase());
+    public static LoginPool getLoginPool(UserData data) {
+        LoginPool pool = new LoginPool(data.getHost(), data.getUser(), data.getDatabase());
         if(!pools.contains(pool)){
             pools.add(pool);
         }
@@ -35,7 +35,7 @@ public class EasySql extends PluginBase {
     @Override
     public void onDisable() {
         for (BaseMySql mysql : PluginManager.getList()) {
-            if(mysql != null) {
+            if (mysql != null) {
                 mysql.shutdown();
             }
         }

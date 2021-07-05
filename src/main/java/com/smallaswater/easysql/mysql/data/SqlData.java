@@ -1,41 +1,46 @@
 package com.smallaswater.easysql.mysql.data;
 
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
 
 /**
  * @author SmallasWater
  */
 public class SqlData {
 
-    private final LinkedHashMap<String,Object> data = new LinkedHashMap<>();
+    private final LinkedHashMap<String, Object> data = new LinkedHashMap<>();
+
+    public SqlData() {
+    }
+
+    public SqlData(String column, Object object) {
+        data.put(column.toLowerCase(), object);
+    }
 
     public LinkedHashMap<String, Object> getData() {
         return data;
     }
 
-    public SqlData(){}
-
-    public SqlData(String column,Object object){
-        data.put(column.toLowerCase(),object);
-    }
-
     /**
      * 添加数据
+     *
      * @param column 字段名
      * @param object 数据
-     * */
-    public SqlData put(String column,Object object){
+     */
+    public SqlData put(String column, Object object) {
         data.put(column.toLowerCase(), object);
         return this;
     }
 
     /**
      * 获取数据
+     *
      * @param column 字段名
-     * @param <T> 数据类型
-     * */
-    public <T> Object get(String column,T defaultValue){
-        return data.getOrDefault(column.toLowerCase(),defaultValue);
+     * @param <T>    数据类型
+     */
+    public <T> Object get(String column, T defaultValue) {
+        return data.getOrDefault(column.toLowerCase(), defaultValue);
     }
 
     public int getInt(String key) {
@@ -43,7 +48,7 @@ public class SqlData {
     }
 
     public int getInt(String key, int defaultValue) {
-        return ((Number)this.get(key, defaultValue)).intValue();
+        return ((Number) this.get(key, defaultValue)).intValue();
     }
 
     public boolean isInt(String key) {
@@ -57,7 +62,7 @@ public class SqlData {
     }
 
     public double getDouble(String key, double defaultValue) {
-        return ((Number)this.get(key, defaultValue)).doubleValue();
+        return ((Number) this.get(key, defaultValue)).doubleValue();
     }
 
     public boolean isDouble(String key) {
@@ -93,26 +98,26 @@ public class SqlData {
     }
 
 
-
     /**
      * 获取所有字段名
+     *
      * @return 字段名
-     * */
-    public List<String> getColumns(){
+     */
+    public List<String> getColumns() {
         return new LinkedList<>(data.keySet());
     }
 
-    public String getColumn(){
+    public String getColumn() {
         return getColumn(0);
     }
 
-    public Object getValue(){
+    public Object getValue() {
         return getValue(0);
     }
 
-    public String getColumn(int index){
+    public String getColumn(int index) {
         LinkedList<String> names = new LinkedList<>(data.keySet());
-        if(names.size() > index){
+        if (names.size() > index) {
             return names.get(index);
         }
         return null;
@@ -121,58 +126,58 @@ public class SqlData {
 
     /**
      * 根据索引位置获取返回的数据
-     * */
-    public Object getValue(int index){
+     */
+    public Object getValue(int index) {
         LinkedList<Object> names = new LinkedList<>(data.values());
-        if(names.size() > index){
+        if (names.size() > index) {
             return names.get(index);
         }
         return null;
     }
 
 
-    public List<Object> getObjects(){
+    public List<Object> getObjects() {
         return new LinkedList<>(data.values());
     }
 
     /**
      * 将获取的所有字段转换为字符串
-     * */
-    public String getColumnToString(){
-       return getDefaultToString(getColumns(),false);
+     */
+    public String getColumnToString() {
+        return getDefaultToString(getColumns(), false);
     }
 
     /**
      * 将获取的所有数值转换为字符串
-     * */
-    public String getObjectToString(){
-        return getDefaultToString(getObjects(),true);
+     */
+    public String getObjectToString() {
+        return getDefaultToString(getObjects(), true);
     }
 
-    private String getDefaultToString(List<?> objects,boolean key){
+    private String getDefaultToString(List<?> objects, boolean key) {
         StringBuilder builder = new StringBuilder();
-        for(Object s:objects){
-            if(key){
+        for (Object s : objects) {
+            if (key) {
                 builder.append("'").append(s).append("'").append(",");
-            }else{
+            } else {
                 builder.append(s).append(",");
             }
 
         }
         String str = builder.toString();
-        return str.substring(0,str.length()-1);
+        return str.substring(0, str.length() - 1);
     }
 
     @Override
     public String toString() {
         StringBuilder builder = new StringBuilder("[");
 
-        for(String name:data.keySet()){
+        for (String name : data.keySet()) {
             Object o = data.get(name);
-            if(o == null){
+            if (o == null) {
                 o = "null";
             }
-            builder.append("column: ").append(name).append(" value: ").append(o.toString());
+            builder.append("column: ").append(name).append(" value: ").append(o);
         }
         builder.append("]");
         return builder.toString();

@@ -2,8 +2,6 @@ package com.smallaswater.easysql.mysql.data;
 
 
 
-import com.smallaswater.easysql.EasySql;
-import com.smallaswater.easysql.mysql.manager.SqlManager;
 import com.smallaswater.easysql.mysql.utils.AbstractOperation;
 import com.smallaswater.easysql.mysql.utils.ChunkSqlType;
 import com.smallaswater.easysql.mysql.utils.MySqlFunctions;

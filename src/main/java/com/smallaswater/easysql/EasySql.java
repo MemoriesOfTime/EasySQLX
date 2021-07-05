@@ -2,7 +2,6 @@ package com.smallaswater.easysql;
 
 
 import cn.nukkit.plugin.PluginBase;
-import com.mchange.v2.c3p0.ComboPooledDataSource;
 import com.smallaswater.easysql.mysql.BaseMySql;
 import com.smallaswater.easysql.mysql.manager.PluginManager;
 import com.smallaswater.easysql.mysql.utils.LoginPool;
@@ -21,7 +20,7 @@ public class EasySql extends PluginBase {
     @Override
     public void onEnable() {
 
-        this.getLogger().info("已加载 EasyMySQL 插件 v2.0.3");
+        this.getLogger().info("已加载 EasyMySQL 插件 v"+this.getDescription().getVersion());
     }
 
     public static LoginPool getLoginPool(UserData data){

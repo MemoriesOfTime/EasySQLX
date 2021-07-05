@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.smallaswater.easysql</groupId>
+    <artifactId>EasyMySQL</artifactId>
+    <version>2.1.0</version>
+    <dependencies>
+
+        <dependency>
+            <groupId>com.mchange</groupId>
+            <artifactId>c3p0</artifactId>
+            <version>0.9.5.3</version>
+        </dependency>
+        <dependency>
+            <groupId>cn.nukkit</groupId>
+            <artifactId>nukkit</artifactId>
+            <version>1.1.7</version> <!-- 记得修改到已经安装到本地库最新版本 -->
+            <scope>system</scope>
+            <systemPath>F:/Nukkit驱动/nukkit-1.16.jar</systemPath>
+        </dependency>
+
+
+    </dependencies>
+    <build>
+        <finalName>${project.artifactId}_v${project.version}</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.5.1</version>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                </configuration>
+            </plugin>
+
+
+        </plugins>
+    </build>
+    <!-- 将外部jar一起打包成war -->
+
+
+
+
+</project>

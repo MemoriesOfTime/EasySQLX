@@ -1,7 +1,10 @@
 package com.smallaswater.easysql.mysql.utils;
 
-import com.mchange.v2.c3p0.ComboPooledDataSource;
+
+import com.alibaba.druid.pool.DruidDataSource;
 import com.smallaswater.easysql.mysql.manager.SqlManager;
+
+import javax.sql.DataSource;
 
 /**
  * @author SmallasWater
@@ -10,7 +13,7 @@ import com.smallaswater.easysql.mysql.manager.SqlManager;
  */
 public class LoginPool {
 
-    public ComboPooledDataSource dataSource = new ComboPooledDataSource();
+    public DruidDataSource dataSource = new DruidDataSource();
     private final String user;
 
     private final String ip;

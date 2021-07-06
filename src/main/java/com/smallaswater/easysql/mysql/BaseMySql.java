@@ -59,23 +59,15 @@ public abstract class BaseMySql extends AbstractOperation {
             this.pool = EasySql.getLoginPool(data);
 
             Class.forName("com.mysql.jdbc.Driver");
-            this.pool.dataSource.setDriverClass("com.mysql.jdbc.Driver");
-            this.pool.dataSource.setDebugUnreturnedConnectionStackTraces(false);
-
-            this.pool.dataSource.setJdbcUrl("jdbc:mysql://" + this.data.getHost() + ':' + this.data.getPort() + '/' + this.database + "?&autoReconnect=true&failOverReadOnly=false&serverTimezone=GMT&characterEncoding=utf8&useSSL=false");
-            this.pool.dataSource.setUser(this.data.getUser());
+            this.pool.dataSource.setDriverClassName("com.mysql.cj.jdbc.Driver");
+            this.pool.dataSource.setUrl("jdbc:mysql://" + this.data.getHost() + ':' + this.data.getPort() + '/' + this.data.getDatabase() + "?&autoReconnect=true&failOverReadOnly=false&serverTimezone=GMT&characterEncoding=utf8&useSSL=false");
+            this.pool.dataSource.setUsername(this.data.getUser());
             this.pool.dataSource.setPassword(this.data.getPassWorld());
-            this.pool.dataSource.setInitialPoolSize(3);
-            this.pool.dataSource.setAcquireIncrement(1);
-            this.pool.dataSource.setMinPoolSize(1);
-            this.pool.dataSource.setMaxPoolSize(30);
-            this.pool.dataSource.setMaxStatements(50);
-            this.pool.dataSource.setAutoCommitOnClose(true);
-            this.pool.dataSource.setTestConnectionOnCheckout(true);
-            this.pool.dataSource.setMaxIdleTime(1800);
-            this.pool.dataSource.setPreferredTestQuery("SELECT 1");
-            this.pool.dataSource.setMaxIdleTime(30);
-            this.pool.dataSource.setIdleConnectionTestPeriod(1800);
+            this.pool.dataSource.setInitialSize(3);
+            this.pool.dataSource.setMinIdle(1);
+            this.pool.dataSource.setMaxActive(30);
+            this.pool.dataSource.setValidationQuery("SELECT 1");
+            this.pool.dataSource.setTimeBetweenEvictionRunsMillis(1800);
 
 
 //            dataSource.
@@ -92,8 +84,6 @@ public abstract class BaseMySql extends AbstractOperation {
         } catch (ClassNotFoundException var2) {
             var2.printStackTrace();
             plugin.getLogger().info("连接数据库出现异常...");
-        } catch (PropertyVetoException e) {
-            e.printStackTrace();
         } finally {
 
             if (connection != null) {

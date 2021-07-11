@@ -39,6 +39,7 @@ public enum Types {
      * 时间
      */
     DATE("date", 255, "not null"),
+    DATETIME("datetime", "", "", "not null"),
     /**
      * 字符串
      */
@@ -62,20 +63,24 @@ public enum Types {
 
     }
 
-    public void setOtherSize(Object otherSize) {
+    public Types setOtherSize(Object otherSize) {
         this.otherSize = otherSize;
+        return this;
     }
 
-    public void setSize(Object size) {
+    public Types setSize(Object size) {
         this.size = size;
+        return this;
     }
 
-    public void setValue(Object value) {
+    public Types setValue(Object value) {
         this.value = value;
+        return this;
     }
 
-    public void setSql(String sql) {
+    public Types setSql(String sql) {
         this.sql = sql;
+        return this;
     }
 
     @Override

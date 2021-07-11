@@ -15,11 +15,10 @@ import java.util.ArrayList;
  */
 public class EasySql extends PluginBase {
 
-    private static ArrayList<LoginPool> pools = new ArrayList<>();
+    private static final ArrayList<LoginPool> pools = new ArrayList<>();
 
     @Override
     public void onEnable() {
-
         this.getLogger().info("已加载 EasyMySQL 插件 v"+this.getDescription().getVersion());
     }
 

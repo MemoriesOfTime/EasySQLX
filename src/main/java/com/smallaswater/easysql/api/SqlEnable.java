@@ -4,8 +4,10 @@ package com.smallaswater.easysql.api;
 import cn.nukkit.plugin.Plugin;
 import com.smallaswater.easysql.exceptions.MySqlLoginException;
 import com.smallaswater.easysql.mysql.manager.SqlManager;
+import com.smallaswater.easysql.mysql.manager.UseTableSqlManager;
 import com.smallaswater.easysql.mysql.utils.TableType;
 import com.smallaswater.easysql.mysql.utils.UserData;
+import org.jetbrains.annotations.NotNull;
 
 
 /**
@@ -16,34 +18,44 @@ import com.smallaswater.easysql.mysql.utils.UserData;
  *
  * @author 楠木i, 若水
  */
+@Deprecated
 public class SqlEnable {
 
     private final SqlManager manager;
     private final UserData data;
-    private final boolean isEnable;
 
-    public SqlEnable(Plugin plugin, String tableName, UserData data, TableType... table) throws MySqlLoginException {
+    public SqlEnable(@NotNull Plugin plugin, @NotNull UserData data) throws MySqlLoginException {
         this.data = data;
-        this.manager = new SqlManager(plugin, tableName, data, table);
-        this.isEnable = this.manager.isEnable();
+        this.manager = new SqlManager(plugin, data);
+    }
+
+    @Deprecated
+    public SqlEnable(@NotNull Plugin plugin, String tableName, UserData data, TableType... tables) throws MySqlLoginException {
+        this.data = data;
+        this.manager = new UseTableSqlManager(plugin, data, tableName);
+        if (tableName != null && !"".equals(tableName.trim()) && tables.length > 0) {
+            if (this.manager.createTable(tableName, tables)) {
+                plugin.getLogger().info("创建数据表" + tableName + "成功");
+            }
+        }
     }
 
     public boolean isEnable() {
-        return isEnable;
+        return this.manager.isEnable();
     }
 
     /**
      * 关闭服务器的时候记得执行这个
      */
     public void disable() {
-        manager.shutdown();
+        this.manager.disable();
     }
 
     public UserData getData() {
-        return data;
+        return this.data;
     }
 
     public SqlManager getManager() {
-        return manager;
+        return this.manager;
     }
 }

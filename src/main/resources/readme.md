@@ -14,32 +14,41 @@
 >  
 >   /**
 >    * 连接数据表
->    * 若增加 types 参数，则创建数据库
 >    */
->   SqlManager manager = new SqlManager(Plugin,"表单名称", UserData); 
->   ~~~
->   - 调用数据库对象 SqlManager 这里封装了大部分的MySQL指令
->   ~~~
->   SqlManager manager = new SqlManager(Plugin,"表单名称", UserData, TableType... type);
->   /**
->     * 获取 SQLDataManager
->     */
->    SQLDataManager sdm = manager.getSqlManager();
+>   SqlManager manager = new SqlManager(Plugin, UserData);
 >   
 >     ~~~
+~~~~
  * 用法简介
-    * SqlEnable 类: API类。使用本插件需实例化本类连接数据库
+    * SqlManager 类: 使用本插件需实例化本类连接数据库
       
       参数:
        - plugin: 插件的 pluginBase 类即可
-       - tableName: 数据库的表单名称
-       - data: 用户数据 具体参考 **UserData** 构造方法
-       - table: 创建数据表需要用到的参数 (可不填 若没有创建相应的数据表，则这个为必填项)
+       - data: 数据库账号密码等数据 具体参考 **UserData** 构造方法
 
       方法:
+       - isEnable(): 返回数据库是否连接成功
        - disable(): 关闭数据库的连接 一般在插件onDisable 内使用
-       - getManager(): 获取 SqlManager 类后进行一系列操作
-       - getData(): 获取 UserData 类
+       - getConnection(): 获取**Connection**
+       - executeSql(String sql, ChunkSqlType... value): 执行sql语句
+       - executeFunction(MySqlFunctions functions): 执行MySQL函数
+       - executeFunction(String functions): 执行MySQL函数
+       - isExistTable(String tableName): 是否存在表
+       - createTable(String tableName): 创建一个只包含自增ID的表
+       - createTable(String tableName, TableType... tableTypes): 根据参数创建表
+       - deleteTable(String tableName): 删除表
+       - isExistColumn(String table, String column): 是否存在字段(列)  
+       - createColumn(String tableName, TableType tableType): 创建字段(列)
+       - deleteColumn(String tableName, String args): 删除字段(列)
+       - isExistsData(String tableName, String column, String data): 是否存在数据
+       - setData(String tableName, SqlData data, SqlData where): 修改数据
+       - insertData(String tableName, SqlData data): 添加数据
+       - insertData(String tableName, LinkedList<SqlData> datas): 添加多条数据
+       - deleteData(String tableName, SqlData data): 删除数据
+       - getDataSize(String sql, String tableName, ChunkSqlType... sqlType): 获取数据条数
+       - getData(String tableName, SelectType selectType): 获取数据
+       - getData(String sql, ChunkSqlType... types): 获取数据
+   ~~~~
     * SqlData: 为查询语句获取的返回值 或者为向 MySQL写入数据用到的参数
 
       参数:
@@ -51,8 +60,6 @@
        - get(String column,T defaultValue): 根据字段名获取 任意类型数据 T 为返回值为null的情况下的类型
        - getColumns(): 获取返回的所有字段名称
        - getColumn(int index): 根据索引获取对应的字段名
-     
-       
 
 
 

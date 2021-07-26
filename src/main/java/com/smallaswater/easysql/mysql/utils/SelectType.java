@@ -13,6 +13,10 @@ public class SelectType {
     @Getter
     private final Types type;
 
+    public SelectType(String key, String value) {
+        this(key, value, Types.EQUAL);
+    }
+
     public SelectType(String key, String value, Types type) {
         this.key = key;
         this.value = value;

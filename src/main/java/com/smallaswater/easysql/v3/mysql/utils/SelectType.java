@@ -1,4 +1,4 @@
-package com.smallaswater.easysql.mysql.utils;
+package com.smallaswater.easysql.v3.mysql.utils;
 
 import lombok.Getter;
 

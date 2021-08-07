@@ -1,49 +1,68 @@
 package com.smallaswater.easysql.mysql.data;
 
 
-import cn.nukkit.Server;
+import com.smallaswater.easysql.mysql.utils.AbstractOperation;
 import com.smallaswater.easysql.mysql.utils.ChunkSqlType;
-import com.smallaswater.easysql.mysql.utils.LoginPool;
 import com.smallaswater.easysql.mysql.utils.MySqlFunctions;
-import org.jetbrains.annotations.NotNull;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 
 /**
- * 数据库数据操作类
+ * 这里是一个manager
  *
  * @author SmallasWater
  */
 public class SqlDataManager {
 
+
     private static final LinkedBlockingQueue<Runnable> QUEUE = new LinkedBlockingQueue<>(5);
 
-    private static final ThreadPoolExecutor THREAD_POOL = new ThreadPoolExecutor(
-            5,
-            20,
-            60,
-            TimeUnit.SECONDS,
-            QUEUE,
-            new ThreadPoolExecutor.AbortPolicy()
-    );
+    private static final ThreadPoolExecutor THREAD_POOL = new ThreadPoolExecutor(5, 20, 60, TimeUnit.SECONDS, QUEUE, new ThreadPoolExecutor.AbortPolicy());
 
-    private SqlDataManager() {
-        throw new RuntimeException();
+    private final AbstractOperation manager;
+
+    private final String database;
+
+    private String tableName;
+
+    private PreparedStatement preparedStatement;
+
+    public SqlDataManager(String database, String tableName, AbstractOperation manager) {
+        this.tableName = tableName;
+        this.manager = manager;
+        this.database = database;
     }
+
+    /**
+     * 设置当前表
+     * @param tableName 表名
+     * */
+    public void setTableName(String tableName) {
+        this.tableName = tableName;
+    }
+
+    /**
+     * 获取当前表
+     *
+     * @return 表名
+     */
+    public String getTableName() {
+        return tableName;
+    }
+
 
     /**
      * 限制条数的分组查询
      *
      * @param column  字段名
-     * @param tableName    表名
+     * @param form    表名 null 或不写为当前表
      * @param where   条件
      * @param like    相似条件
      * @param start   开始位置
@@ -55,45 +74,36 @@ public class SqlDataManager {
      *
      * @return 数据列表
      */
-    public static SqlDataList<SqlData> selectExecute(@NotNull LoginPool loginPool,
-                                              @NotNull String column,
-                                              @NotNull String tableName,
-                                              String where, String like,
-                                              int start,
-                                              int length,
-                                              String groupBy,
-                                              String orderBy,
-                                              String having,
-                                              ChunkSqlType... types) {
-        Objects.requireNonNull(loginPool);
-        if (column != null && !"".equalsIgnoreCase(column.trim())) {
-            throw new NullPointerException();
-        }
-        if (tableName != null && !"".equalsIgnoreCase(tableName.trim())) {
-            throw new NullPointerException();
+    public SqlDataList<SqlData> selectExecute(String column, String form, String where, String like, int start, int length, String groupBy, String orderBy, String having, ChunkSqlType... types) {
+        String tableName = this.tableName;
+
+        if (form != null && !"".equalsIgnoreCase(form)) {
+            tableName = form;
         }
         String sql = "SELECT " + column + " FROM " + tableName;
-        if (where != null && !"".equalsIgnoreCase(where.trim())) {
+        if (where != null && !"".equalsIgnoreCase(where)) {
             sql = sql + " WHERE " + where;
         }
-        if (like != null && !"".equalsIgnoreCase(like.trim())) {
+        if (like != null && !"".equalsIgnoreCase(like)) {
             sql = sql + "LIKE " + like;
         }
-        if (groupBy != null && !"".equalsIgnoreCase(groupBy.trim())) {
+        if (groupBy != null && !"".equalsIgnoreCase(groupBy)) {
             sql = sql + " GROUP BY " + groupBy;
         }
-        if (having != null && !"".equalsIgnoreCase(having.trim())) {
+        if (having != null && !"".equalsIgnoreCase(having)) {
             sql = sql + " HAVING " + having;
         }
         if (start != 0 && length != 0) {
             sql = sql + " LIMIT " + start + "," + length;
         }
-        if (orderBy != null && !"".equalsIgnoreCase(orderBy.trim())) {
+        if (orderBy != null && !"".equalsIgnoreCase(orderBy)) {
             sql = sql + " ORDER BY " + orderBy;
         }
 
-        return selectExecute(loginPool, sql, types);
+
+        return selectExecute(sql, types);
     }
+
 
     /**
      * 根据限制查询
@@ -103,8 +113,8 @@ public class SqlDataManager {
      * @param where  条件
      * @param types  防SQL注入传参 1为第一个问号
      */
-    public static SqlDataList<SqlData> selectExecute(LoginPool loginPool,String column, String form, String where, ChunkSqlType... types) {
-        return selectExecute(loginPool, column, form, where, null, 0, 0, null, null, null, types);
+    public SqlDataList<SqlData> selectExecute(String column, String form, String where, ChunkSqlType... types) {
+        return selectExecute(column, form, where, null, 0, 0, null, null, null, types);
     }
 
     /**
@@ -116,8 +126,8 @@ public class SqlDataManager {
      * @param having  分组后的条件判断
      * @param types   防SQL注入传参 1为第一个问号
      */
-    public static SqlDataList<SqlData> selectExecute(LoginPool loginPool, String column, String form, String groupBy, String having, ChunkSqlType... types) {
-        return selectExecute(loginPool, column, form, null, null, 0, 0, groupBy, null, having, types);
+    public SqlDataList<SqlData> selectExecute(String column, String form, String groupBy, String having, ChunkSqlType... types) {
+        return selectExecute(column, form, null, null, 0, 0, groupBy, null, having, types);
     }
 
     /**
@@ -129,8 +139,8 @@ public class SqlDataManager {
      * @param length 查询条数
      * @param types  防SQL注入传参 1为第一个问号
      */
-    public static SqlDataList<SqlData> selectExecute(LoginPool loginPool, String column, String form, String where, int length, ChunkSqlType... types) {
-        return selectExecute(loginPool, column, form, where, null, 0, length, null, null, null, types);
+    public SqlDataList<SqlData> selectExecute(String column, String form, String where, int length, ChunkSqlType... types) {
+        return selectExecute(column, form, where, null, 0, length, null, null, null, types);
     }
 
     /**
@@ -143,35 +153,33 @@ public class SqlDataManager {
      * @param length 查询条数
      * @param types  防SQL注入传参 1为第一个问号
      */
-    public static SqlDataList<SqlData> selectExecute(LoginPool loginPool, String column, String form, String where, int start, int length, ChunkSqlType... types) {
-        return selectExecute(loginPool, column, form, where, null, start, length, null, null, null, types);
+    public SqlDataList<SqlData> selectExecute(String column, String form, String where, int start, int length, ChunkSqlType... types) {
+        return selectExecute(column, form, where, null, start, length, null, null, null, types);
     }
+
 
     /**
      * 执行查询SQL指令
      *
      * @param types    防SQL注入参数
-     * @param commands @Language("SQL")
-     *
+     * @param commands sql语句
      */
-    public static SqlDataList<SqlData> selectExecute(LoginPool loginPool, String commands, ChunkSqlType... types) {
+    public SqlDataList<SqlData> selectExecute(String commands, ChunkSqlType... types) {
         SqlDataList<SqlData> objects = new SqlDataList<>(commands, types);
-        PreparedStatement preparedStatement = null;
-        Connection connection = null;
+        Connection connection = manager.getConnection();
         try {
-            connection = loginPool.dataSource.getConnection();
-            preparedStatement = connection.prepareStatement(commands);
+            this.preparedStatement = connection.prepareStatement(commands);
             if (types.length > 0) {
                 for (ChunkSqlType types1 : types) {
-                    preparedStatement.setString(types1.getI(), types1.getValue());
+                    this.preparedStatement.setString(types1.getI(), types1.getValue());
                 }
             }
-            ResultSet resultSet = preparedStatement.executeQuery();
+            ResultSet resultSet = this.preparedStatement.executeQuery();
             if (resultSet != null) {
                 ResultSetMetaData data;
-                resultSet = preparedStatement.executeQuery();
+                resultSet = this.preparedStatement.executeQuery();
                 while (resultSet.next()) {
-                    data = preparedStatement.getMetaData();
+                    data = this.preparedStatement.getMetaData();
                     int columnCount = data.getColumnCount();
                     SqlData map = new SqlData();
                     for (int i = 0; i < columnCount; i++) {
@@ -181,21 +189,17 @@ public class SqlDataManager {
                 }
             }
         } catch (Exception e) {
-            Server.getInstance().getLogger().error("执行 " + commands + " 语句出现异常", e);
+            e.printStackTrace();
+            return objects;
+
         } finally {
-            if (preparedStatement != null) {
-                try {
-                    preparedStatement.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
+            try {
+//                connection.close();
+                if (this.preparedStatement != null) {
+                    this.preparedStatement.close();
                 }
-            }
-            if (connection != null) {
-                try {
-                    connection.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
+            } catch (SQLException e) {
+                e.printStackTrace();
             }
         }
         return objects;
@@ -205,14 +209,86 @@ public class SqlDataManager {
     /**
      * 判断数据是否存在
      *
-     * @param tableName 表单名称
      * @param column 字段名
      * @param data   数据
      * @return 是否存在
      */
-    public static boolean isExists(LoginPool loginPool, String tableName, String column, String data) {
+    public boolean isExists(String column, String data) {
         String sql = "SELECT " + MySqlFunctions.getFunction(MySqlFunctions.SqlFunctions.COUNT, "*") + " c FROM " + tableName + " WHERE " + column + " = ?";
-        return selectExecute(loginPool, sql, new ChunkSqlType(1, data)).get().getInt("c") > 0;
+        return selectExecute(sql, new ChunkSqlType(1, data)).get().getInt("c") > 0;
+    }
+
+    /**
+     * 判断数据是否存在
+     *
+     * @param column    字段名
+     * @param data      数据
+     * @param tableName 表单名称
+     * @return 是否存在
+     */
+    public boolean isExists(String column, String data, String tableName) {
+        String sql = "SELECT " + MySqlFunctions.getFunction(MySqlFunctions.SqlFunctions.COUNT, "*") + " c FROM " + tableName + " WHERE " + column + " = ?";
+        return selectExecute(sql, new ChunkSqlType(1, data)).get().getInt("c") > 0;
+    }
+
+    /**
+     * 删除数据
+     *
+     * @param data 数据
+     * @return 是否删除成功
+     */
+    public boolean deleteData(SqlData data) {
+        return deleteData(data, tableName);
+    }
+
+    /**
+     * 删除数据
+     *
+     * @param data      数据
+     * @param tableName 表单名称
+     * @return 是否删除成功
+     */
+    public boolean deleteData(SqlData data, String tableName) {
+        StringBuilder cmd = new StringBuilder("DELETE FROM " + tableName + " WHERE ");
+        ArrayList<ChunkSqlType> objects = new ArrayList<>();
+        int i = 0;
+        for (String column : data.getData().keySet()) {
+            if (i >= 1) {
+                cmd.append(" and ").append(column).append(" = ?");
+            } else {
+                cmd.append(column).append(" = ?");
+            }
+            objects.add(new ChunkSqlType(i + 1, data.getData().get(column).toString()));
+            i++;
+        }
+
+        return runSql(cmd.toString(), objects.toArray(new ChunkSqlType[]{}));
+    }
+
+
+    /**
+     * 添加多条数据
+     *
+     * @param datas 数据列表
+     * @return 是否添加成功
+     */
+    public boolean insertData(LinkedList<SqlData> datas) {
+        return insertData(datas, tableName);
+    }
+
+    /**
+     * 添加多条数据
+     *
+     * @param datas     数据列表
+     * @param tableName 表单名称
+     * @return 是否添加成功
+     */
+    public boolean insertData(LinkedList<SqlData> datas, String tableName) {
+        for (SqlData data : datas) {
+            THREAD_POOL.execute(() -> insertData(data, tableName));
+
+        }
+        return true;
     }
 
     /**
@@ -221,63 +297,34 @@ public class SqlDataManager {
      * @param sql   SQL 语句
      * @param value 防SQL注入
      * @return 是否执行成功
-     * 通过线程池调用 Connection
      */
-    public static boolean executeSql(LoginPool loginPool, String sql, ChunkSqlType... value) {
-        Connection connection = null;
-        PreparedStatement preparedStatement = null;
+    public boolean runSql(String sql, ChunkSqlType... value) {
+        Connection connection = manager.getConnection();
         try {
-            connection = loginPool.dataSource.getConnection();
-            preparedStatement = connection.prepareStatement(sql);
+            this.preparedStatement = connection.prepareStatement(sql);
             for (ChunkSqlType type : value) {
-                preparedStatement.setString(type.getI(), type.getValue());
+                this.preparedStatement.setString(type.getI(), type.getValue());
             }
-            preparedStatement.execute();
-            preparedStatement.close();
+            this.preparedStatement.execute();
+            this.preparedStatement.close();
             return true;
 
         } catch (SQLException e) {
-            Server.getInstance().getLogger().error("执行 " + sql + " 语句出现异常", e);
+            System.out.println("执行 " + sql + " 语句出现异常");
+            System.out.println(e.getMessage());
         } finally {
-            if (preparedStatement != null) {
-                try {
-                    preparedStatement.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
             }
-            if (connection != null) {
-                try {
-                    connection.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
+
         }
         return false;
     }
 
-    /**
-     * 单执行MySQL函数
-     *
-     * @param functions 封装的函数
-     * @return 返回值
-     */
-    public static SqlData executeFunction(LoginPool loginPool, MySqlFunctions functions) {
-        return selectExecute(loginPool, functions.getCommand()).get();
-    }
 
-    /**
-     * 单执行MySQL函数
-     *
-     * @param functions 自定义的函数 例如 COUNT(*)
-     * @return 返回值
-     */
-    public static SqlData executeFunction(LoginPool loginPool, String functions) {
-        return selectExecute(loginPool, functions).get();
-    }
-
-    private static String getUpDataWhere(SqlData data) {
+    private String getUpDataWhere(SqlData data) {
         StringBuilder builder = new StringBuilder();
         for (String column : data.getData().keySet()) {
             builder.append(column).append(" = ? and");
@@ -286,7 +333,7 @@ public class SqlDataManager {
         return str.substring(0, str.length() - 3);
     }
 
-    private static String getUpDataColumn(SqlData data) {
+    private String getUpDataColumn(SqlData data) {
         StringBuilder builder = new StringBuilder();
         for (String column : data.getData().keySet()) {
             builder.append(column).append(" = ?,");
@@ -299,18 +346,26 @@ public class SqlDataManager {
      * 判断表是否存在
      *
      * @param tableName 表名
+     */
+    public boolean isTableColumnData(String tableName) {
+        return isTableColumnData(tableName, null);
+    }
+
+    /**
+     * 判断表是否存在
+     *
+     * @param tableName 表名
      * @param database  数据库名
      */
-    public static boolean isTableColumnData(LoginPool loginPool, String database, String tableName) {
-        if (tableName != null && !"".equalsIgnoreCase(tableName.trim())) {
-            throw new NullPointerException();
-        }
-        if (database != null && !"".equalsIgnoreCase(database.trim())) {
-            throw new NullPointerException();
+    public boolean isTableColumnData(String tableName, String database) {
+        String data = this.database;
+        if (database != null && !"".equalsIgnoreCase(database)) {
+            data = database;
         }
         String command = "SELECT * FROM information_schema.TABLES  WHERE table_schema =? AND table_name = ?";
-        return selectExecute(loginPool, command, new ChunkSqlType(1, database), new ChunkSqlType(2, tableName)).size() == 0;
+        return selectExecute(command, new ChunkSqlType(1, data), new ChunkSqlType(2, tableName)).size() == 0;
     }
+
 
     /**
      * 修改数据
@@ -318,7 +373,7 @@ public class SqlDataManager {
      * @param data  数据
      * @param where 参数判断
      */
-    public static boolean setData(LoginPool loginPool, String tableName, SqlData data, SqlData where) {
+    public boolean setData(SqlData data, SqlData where, String tableName) {
         ArrayList<ChunkSqlType> objects = new ArrayList<>();
         int i = 1;
         for (Map.Entry<String, Object> data1 : data.getData().entrySet()) {
@@ -331,69 +386,61 @@ public class SqlDataManager {
         }
 
         String sql = "UPDATE " + tableName + " SET " + getUpDataColumn(data) + " WHERE " + getUpDataWhere(where);
-        return executeSql(loginPool, sql, objects.toArray(new ChunkSqlType[]{}));
+        return runSql(sql, objects.toArray(new ChunkSqlType[]{}));
+    }
+
+
+    /**
+     * 修改数据
+     *
+     * @param data  数据
+     * @param where 参数判断
+     */
+    public boolean setData(SqlData data, SqlData where) {
+        return setData(data, where, tableName);
     }
 
     /**
      * 添加数据
      *
      * @param data 数据
-     * @param tableName 表单名称
-     * @return 是否添加成功
      */
-    public static boolean insertData(LoginPool loginPool, String tableName, SqlData data) {
+    public boolean insertData(SqlData data) {
+        return insertData(data, tableName);
+    }
+
+    /**
+     * 添加数据
+     *
+     * @param data 数据
+     */
+    public boolean insertData(SqlData data, String tableName) {
         String column = data.getColumnToString();
         String values = data.getObjectToString();
-        StringBuilder builder = new StringBuilder("INSERT INTO ").append(tableName).append(" (").append(column).append(") VALUES (");
-        builder.append("?");
-        for (int i=1; i<data.getColumns().size(); i++) {
-            builder.append(",?");
-        }
-        builder.append(")");
-        ArrayList<ChunkSqlType> chunkSqlTypes = new ArrayList<>();
-        int i = 1;
-        for (Object o : data.getObjects()) {
-            chunkSqlTypes.add(new ChunkSqlType(i, String.valueOf(o)));
-            i++;
-        }
-        return executeSql(loginPool, builder.toString(), chunkSqlTypes.toArray(new ChunkSqlType[0]));
+        String sql = "INSERT INTO " + tableName + " (" + column + ") VALUES (?)";
+        return runSql(sql, new ChunkSqlType(1, values));
+    }
+
+
+    /**
+     * 单执行MySQL函数
+     * 请执行 danhanghans
+     *
+     * @param functions 封装的函数
+     * @return 返回值
+     */
+    public SqlData executeFunction(MySqlFunctions functions) {
+        return selectExecute(functions.getCommand()).get();
     }
 
     /**
-     * 添加多条数据
+     * 单执行MySQL函数
+     * 请执行 danhanghans
      *
-     * @param datas     数据列表
-     * @param tableName 表单名称
-     * @return 是否添加成功
+     * @param functions 自定义的函数 例如 COUNT(*)
+     * @return 返回值
      */
-    public static boolean insertData(LoginPool loginPool, String tableName, LinkedList<SqlData> datas) {
-        for (SqlData data : datas) {
-            THREAD_POOL.execute(() -> insertData(loginPool, tableName, data));
-        }
-        return true;
-    }
-
-    /**
-     * 删除数据
-     *
-     * @param tableName 表单名称
-     * @param data      数据
-     * @return 是否删除成功
-     */
-    public static boolean deleteData(LoginPool loginPool, String tableName, SqlData data) {
-        StringBuilder cmd = new StringBuilder("DELETE FROM " + tableName + " WHERE ");
-        ArrayList<ChunkSqlType> objects = new ArrayList<>();
-        int i = 0;
-        for (java.lang.String column : data.getData().keySet()) {
-            if (i >= 1) {
-                cmd.append(" and ").append(column).append(" = ?");
-            } else {
-                cmd.append(column).append(" = ?");
-            }
-            objects.add(new ChunkSqlType(i + 1, data.getData().get(column).toString()));
-            i++;
-        }
-
-        return executeSql(loginPool, cmd.toString(), objects.toArray(new ChunkSqlType[]{}));
+    public SqlData executeFunction(String functions) {
+        return selectExecute(functions).get();
     }
 }

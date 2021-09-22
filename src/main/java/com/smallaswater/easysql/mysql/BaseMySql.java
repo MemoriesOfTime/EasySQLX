@@ -57,7 +57,7 @@ public abstract class BaseMySql extends AbstractOperation {
         try {
             this.pool = EasySql.getLoginPool(data);
 
-            Class.forName("com.mysql.jdbc.Driver");
+            Class.forName("com.mysql.cj.jdbc.Driver");
             this.pool.dataSource.setDriverClassName("com.mysql.cj.jdbc.Driver");
             this.pool.dataSource.setUrl("jdbc:mysql://" + this.data.getHost() + ':' + this.data.getPort() + '/' + this.data.getDatabase() + "?&autoReconnect=true&failOverReadOnly=false&serverTimezone=GMT&characterEncoding=utf8&useSSL=false");
             this.pool.dataSource.setUsername(this.data.getUser());

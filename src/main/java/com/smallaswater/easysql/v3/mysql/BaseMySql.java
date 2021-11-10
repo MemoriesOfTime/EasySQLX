@@ -85,7 +85,7 @@ public abstract class BaseMySql {
 
             //TODO 修复链接判断
             connection = this.getConnection();
-            if (connection != null) {
+            if (connection != null && !connection.isClosed()) {
                 this.plugin.getLogger().info("已连接数据库");
                 PluginManager.connect(plugin, this);
                 return true;

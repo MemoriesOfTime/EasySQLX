@@ -43,7 +43,7 @@ public enum Types {
     /**
      * 字符串
      */
-    TEXT("text", 255, "not null");
+    TEXT("text", 1, "not null");
 
     protected String sql;
     protected Object size;

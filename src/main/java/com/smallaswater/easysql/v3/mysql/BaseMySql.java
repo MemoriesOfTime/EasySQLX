@@ -21,6 +21,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.Map;
 
 /**
  * 数据库基类文件
@@ -407,6 +408,27 @@ public abstract class BaseMySql {
      */
     public SqlDataList<SqlData> getData(String sql, ChunkSqlType... types) {
         return SqlDataManager.selectExecute(this.pool, sql, types);
+    }
+
+    /**
+     * 获取数据
+     *
+     * @param tableName 表名称
+     * @param column 要查询的字段
+     * @param data 查询条件内容
+     * @return 数据
+     */
+    public SqlDataList<SqlData> getData(String tableName,String column, SqlData data) {
+        ArrayList<ChunkSqlType> chunkSqlTypes = new ArrayList<>();
+        StringBuilder sqlCommand = new StringBuilder();
+        int i = 1;
+        for(Map.Entry<String, Object> sqlData: data.getData().entrySet()){
+            sqlCommand.append(sqlData.getKey()).append("=?");
+            chunkSqlTypes.add(new ChunkSqlType(i, "'"+sqlData.getValue().toString()+"'"));
+            i++;
+        }
+        String command = "SELECT "+column+" FROM "+tableName+" WHERE" + sqlCommand.toString();
+        return this.getData(command, chunkSqlTypes.toArray(new ChunkSqlType[0]));
     }
 
 }

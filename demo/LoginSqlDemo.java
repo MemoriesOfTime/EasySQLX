@@ -37,6 +37,7 @@ public class LoginSqlDemo extends PluginBase {
             this.getLogger().info("数据库连接成功");
         }else{
             this.getLogger().info("数据库连接失败");
+            return;
         }
 
         //TODO 创建表单 字段可以通过Types 选择其他数据类型

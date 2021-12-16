@@ -66,7 +66,6 @@ public abstract class BaseMySql {
      */
     protected boolean connect() throws MySqlLoginException {
         Connection connection = null;
-
         try {
             this.pool = EasySql.getLoginPool(data);
             Class.forName("com.mysql.cj.jdbc.Driver");

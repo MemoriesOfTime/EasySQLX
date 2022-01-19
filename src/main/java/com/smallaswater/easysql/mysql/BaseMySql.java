@@ -66,7 +66,7 @@ public abstract class BaseMySql extends AbstractOperation {
             this.pool.dataSource.setMinIdle(1);
             this.pool.dataSource.setMaxActive(30);
             this.pool.dataSource.setValidationQuery("SELECT 1");
-            this.pool.dataSource.setTimeBetweenEvictionRunsMillis(1800);
+            this.pool.dataSource.setTimeBetweenEvictionRunsMillis(180000);
 
 
 //            dataSource.

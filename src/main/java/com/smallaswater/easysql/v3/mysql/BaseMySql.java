@@ -77,9 +77,9 @@ public abstract class BaseMySql {
             this.pool.dataSource.setMinIdle(1);
             this.pool.dataSource.setMaxActive(30);
             this.pool.dataSource.setValidationQuery("SELECT 1");
-            this.pool.dataSource.setTimeBetweenEvictionRunsMillis(1800);
+            this.pool.dataSource.setTimeBetweenEvictionRunsMillis(180000);
             this.pool.dataSource.setBreakAfterAcquireFailure(true);
-            this.pool.dataSource.setTimeBetweenConnectErrorMillis(1800);
+            this.pool.dataSource.setTimeBetweenConnectErrorMillis(180000);
             this.pool.dataSource.setConnectionErrorRetryAttempts(3);
             this.pool.dataSource.addFilters("wall");
 

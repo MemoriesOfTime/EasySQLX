@@ -1,6 +1,6 @@
 name: EasyMySQL
 main: com.smallaswater.easysql.EasySql
-version: "3.0.3"
+version: "3.0.4"
 api:
   - 1.0.9
   - 2.0.0

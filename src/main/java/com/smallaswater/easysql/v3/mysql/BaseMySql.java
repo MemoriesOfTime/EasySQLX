@@ -385,6 +385,19 @@ public abstract class BaseMySql {
     }
 
     /**
+     * 获取没有重复的数据
+     *
+     * @param tableName 表名称
+     * @param column 要查询的字段
+     * @param data 查询条件内容
+     * @return 数据
+     */
+    public SqlDataList<SqlData> getDisTinctData(String tableName,String column,SqlData data) {
+        return getData(tableName,"DISTINCT "+column,data);
+    }
+
+
+    /**
      * 获取数据
      *
      * @param tableName 表名称

@@ -1,5 +1,6 @@
 package com.smallaswater.easysql.mysql.data;
 
+
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -33,6 +34,8 @@ public class SqlData {
         return this;
     }
 
+
+
     /**
      * 获取数据
      *
@@ -48,9 +51,13 @@ public class SqlData {
     }
 
     public int getInt(String key, int defaultValue) {
-        return ((Number) this.get(key, defaultValue)).intValue();
+        return Integer.parseInt(this.get(key, defaultValue).toString());
     }
 
+    /**
+     * 这个似乎没啥用
+     * */
+    @Deprecated
     public boolean isInt(String key) {
         Object val = data.get(key);
         return val instanceof Integer;
@@ -62,9 +69,13 @@ public class SqlData {
     }
 
     public double getDouble(String key, double defaultValue) {
-        return ((Number) this.get(key, defaultValue)).doubleValue();
+        return Double.parseDouble(this.get(key, defaultValue).toString());
     }
 
+    /**
+     * 这个似乎没啥用
+     * */
+    @Deprecated
     public boolean isDouble(String key) {
         Object val = data.get(key);
         return val instanceof Double;
@@ -79,6 +90,10 @@ public class SqlData {
         return String.valueOf(result);
     }
 
+    /**
+     * 这个似乎没啥用
+     * */
+    @Deprecated
     public boolean isString(String key) {
         Object val = data.get(key);
         return val instanceof String;
@@ -89,9 +104,13 @@ public class SqlData {
     }
 
     public boolean getBoolean(String key, boolean defaultValue) {
-        return (Boolean) this.get(key, defaultValue);
+        return Boolean.parseBoolean(this.get(key, defaultValue).toString());
     }
 
+    /**
+     * 这个似乎没啥用
+     * */
+    @Deprecated
     public boolean isBoolean(String key) {
         Object val = data.get(key);
         return val instanceof Boolean;

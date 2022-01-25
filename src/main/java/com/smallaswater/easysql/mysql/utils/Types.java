@@ -26,6 +26,7 @@ public enum Types {
      * 整数
      */
     INT("int", 10, "not null"),
+
     /**
      * 小数
      */

@@ -163,10 +163,8 @@ public class SqlDataManager {
         try {
             connection = loginPool.dataSource.getConnection();
             preparedStatement = connection.prepareStatement(commands);
-            if (types.length > 0) {
-                for (ChunkSqlType types1 : types) {
-                    preparedStatement.setString(types1.getI(), types1.getValue());
-                }
+            for (ChunkSqlType types1 : types) {
+                preparedStatement.setString(types1.getI(), types1.getValue());
             }
             ResultSet resultSet = preparedStatement.executeQuery();
             if (resultSet != null) {

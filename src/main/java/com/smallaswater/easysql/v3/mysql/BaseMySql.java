@@ -1,6 +1,7 @@
 package com.smallaswater.easysql.v3.mysql;
 
 
+import cn.nukkit.Server;
 import cn.nukkit.plugin.Plugin;
 import com.alibaba.druid.filter.Filter;
 import com.alibaba.druid.wall.WallConfig;
@@ -196,9 +197,9 @@ public abstract class BaseMySql {
      * @param tableName 表名称
      * @return 是否存在
      */
-    public boolean isExistTable(String tableName) {
+    public boolean isExistTable(@NotNull String tableName) {
         try {
-            ResultSet resultSet = this.getConnection().getMetaData().getTables(null, null, tableName, null);
+            ResultSet resultSet = this.getConnection().getMetaData().getTables(null, null, conversionTableName(tableName), null);
             return resultSet.next();
         } catch (SQLException e) {
             return false;
@@ -211,8 +212,8 @@ public abstract class BaseMySql {
      * @param tableName 表名称
      * @return 是否创建成功
      */
-    public boolean createTable(String tableName) {
-        return this.createTable(tableName, new TableType("id", Types.ID));
+    public boolean createTable(@NotNull String tableName) {
+        return this.createTable(conversionTableName(tableName), new TableType("id", Types.ID));
     }
 
     /**
@@ -222,9 +223,9 @@ public abstract class BaseMySql {
      * @param tableTypes 参数
      * @return 是否创建成功
      */
-    public boolean createTable(String tableName, TableType... tableTypes) {
+    public boolean createTable(@NotNull String tableName, TableType... tableTypes) {
         if (!this.isExistTable(tableName)) {
-            String command = "CREATE TABLE " + tableName + "(" + getDefaultTable(tableTypes) + ")engine=InnoDB default charset=utf8";
+            String command = "CREATE TABLE " + conversionTableName(tableName) + "(" + getDefaultTable(tableTypes) + ")engine=InnoDB default charset=utf8";
             return this.executeSql(command);
         }
         return false;
@@ -235,21 +236,20 @@ public abstract class BaseMySql {
      *
      * @param tableName 表名称
      */
-    public void deleteTable(String tableName) {
-        String sql = "DROP TABLE " + tableName;
-        this.executeSql(sql);
+    public void deleteTable(@NotNull String tableName) {
+        this.executeSql("DROP TABLE " + conversionTableName(tableName));
     }
 
     /**
      * 是否存在字段
      *
-     * @param table  表名
+     * @param tableName  表名
      * @param column 字段名
      * @return 是否存在
      */
-    public boolean isExistColumn(String table, String column) {
+    public boolean isExistColumn(@NotNull String tableName, @NotNull String column) {
         try {
-            ResultSet resultSet = this.getConnection().getMetaData().getColumns(null, null, table, column);
+            ResultSet resultSet = this.getConnection().getMetaData().getColumns(null, null, conversionTableName(tableName), column);
             return resultSet.next();
         } catch (SQLException e) {
             return false;
@@ -263,8 +263,8 @@ public abstract class BaseMySql {
      * @param tableType 字段参数
      * @return 是否成功
      */
-    public boolean createColumn(String tableName, TableType tableType) {
-        String command = "ALTER TABLE " + tableName + " ADD " + tableType.getName() + " " + tableType.getType().toString();
+    public boolean createColumn(@NotNull String tableName, @NotNull TableType tableType) {
+        String command = "ALTER TABLE " + conversionTableName(tableName) + " ADD " + tableType.getName() + " " + tableType.getType().toString();
         return this.executeSql(command);
     }
 
@@ -275,9 +275,8 @@ public abstract class BaseMySql {
      * @param tableName 表单名称
      * @return 删除一个字段
      */
-    public boolean deleteColumn(String tableName, String args) {
-        String command = "ALTER TABLE " + tableName + " DROP ?";
-        return this.executeSql(command, new ChunkSqlType(1, args));
+    public boolean deleteColumn(@NotNull String tableName, String args) {
+        return this.executeSql("ALTER TABLE " + conversionTableName(tableName) + " DROP ?", new ChunkSqlType(1, args));
     }
 
     /**
@@ -288,8 +287,8 @@ public abstract class BaseMySql {
      * @param data 条件:值
      * @return 是否存在数据
      */
-    public boolean isExistsData(String tableName, String column, String data) {
-        return SqlDataManager.isExists(this.pool, tableName, column, data);
+    public boolean isExistsData(@NotNull String tableName, @NotNull String column, @NotNull String data) {
+        return SqlDataManager.isExists(this.pool, conversionTableName(tableName), column, data);
     }
 
     /**
@@ -300,8 +299,8 @@ public abstract class BaseMySql {
      * @param where 参数判断
      * @return 是否修改成功
      */
-    public boolean setData(String tableName, SqlData data, SqlData where) {
-        return SqlDataManager.setData(this.pool, tableName, data, where);
+    public boolean setData(@NotNull String tableName, @NotNull SqlData data, @NotNull SqlData where) {
+        return SqlDataManager.setData(this.pool, conversionTableName(tableName), data, where);
     }
 
     /**
@@ -311,8 +310,8 @@ public abstract class BaseMySql {
      * @param data 数据
      * @return 是否添加成功
      */
-    public boolean insertData(String tableName, SqlData data) {
-        return SqlDataManager.insertData(this.pool, tableName, data);
+    public boolean insertData(@NotNull String tableName, @NotNull SqlData data) {
+        return SqlDataManager.insertData(this.pool, conversionTableName(tableName), data);
     }
 
     /**
@@ -322,8 +321,8 @@ public abstract class BaseMySql {
      * @param datas     数据列表
      * @return 是否添加成功
      */
-    public boolean insertData(String tableName, LinkedList<SqlData> datas) {
-        return SqlDataManager.insertData(this.pool, tableName, datas);
+    public boolean insertData(@NotNull String tableName, @NotNull LinkedList<SqlData> datas) {
+        return SqlDataManager.insertData(this.pool, conversionTableName(tableName), datas);
     }
 
     /**
@@ -333,20 +332,24 @@ public abstract class BaseMySql {
      * @param data 数据
      * @return 是否删除成功
      */
-    public boolean deleteData(String tableName, SqlData data) {
-        return SqlDataManager.deleteData(this.pool, tableName, data);
+    public boolean deleteData(@NotNull String tableName, @NotNull SqlData data) {
+        return SqlDataManager.deleteData(this.pool, conversionTableName(tableName), data);
     }
 
     /**
      * 获取数据条数
+     *
+     * @param sql 条件，例如id=?
+     * @param tableName 表单名称
+     * @param sqlType 参数
      */
-    public int getDataSize(String sql, String tableName, ChunkSqlType... sqlType) {
+    public int getDataSize(@NotNull String sql, @NotNull String tableName, ChunkSqlType... sqlType) {
         int i = 0;
         Connection connection = this.getConnection();
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
         try {
-            preparedStatement = connection.prepareStatement("SELECT COUNT(*) FROM " + tableName + " " + sql);
+            preparedStatement = connection.prepareStatement("SELECT COUNT(*) FROM " + conversionTableName(tableName) + " " + sql);
             for(ChunkSqlType type: sqlType) {
                 preparedStatement.setString(type.getI(),type.getValue());
             }
@@ -392,8 +395,11 @@ public abstract class BaseMySql {
      * @param data 查询条件内容
      * @return 数据
      */
-    public SqlDataList<SqlData> getDisTinctData(String tableName,String column,SqlData data) {
-        return getData(tableName,"DISTINCT "+column,data);
+    public SqlDataList<SqlData> getDisTinctData(@NotNull String tableName, String column, @NotNull SqlData data) {
+        if (column == null || column.trim().isEmpty()) {
+            column = "*";
+        }
+        return getData(tableName, "DISTINCT " + column, data);
     }
 
 
@@ -404,10 +410,10 @@ public abstract class BaseMySql {
      * @param selectType 查询条件
      * @return 数据
      */
-    public SqlDataList<SqlData> getData(String tableName, SelectType selectType) {
+    public SqlDataList<SqlData> getData(@NotNull String tableName, @NotNull SelectType selectType) {
         ArrayList<ChunkSqlType> chunkSqlTypes = new ArrayList<>();
         chunkSqlTypes.add(new ChunkSqlType(1, selectType.getValue()));
-        String command = "SELECT * FROM " + tableName + " " + selectType;
+        String command = "SELECT * FROM " + conversionTableName(tableName) + " " + selectType;
         return this.getData(command, chunkSqlTypes.toArray(new ChunkSqlType[0]));
     }
 
@@ -418,7 +424,8 @@ public abstract class BaseMySql {
      * @param types 参数
      * @return 数据
      */
-    public SqlDataList<SqlData> getData(String sql, ChunkSqlType... types) {
+    public SqlDataList<SqlData> getData(@NotNull String sql, ChunkSqlType... types) {
+        Server.getInstance().getLogger().info(sql);
         return SqlDataManager.selectExecute(this.pool, sql, types);
     }
 
@@ -430,17 +437,39 @@ public abstract class BaseMySql {
      * @param data 查询条件内容
      * @return 数据
      */
-    public SqlDataList<SqlData> getData(String tableName,String column, SqlData data) {
+    public SqlDataList<SqlData> getData(@NotNull String tableName, String column, @NotNull SqlData data) {
+        if (column == null || column.trim().isEmpty()) {
+            column = "*";
+        }
         ArrayList<ChunkSqlType> chunkSqlTypes = new ArrayList<>();
         StringBuilder sqlCommand = new StringBuilder();
         int i = 1;
-        for(Map.Entry<String, Object> sqlData: data.getData().entrySet()){
+        for(Map.Entry<String, Object> sqlData: data.getData().entrySet()) {
+            if (i > 1) {
+                sqlCommand.append(" AND ");
+            }
             sqlCommand.append(sqlData.getKey()).append("=?");
-            chunkSqlTypes.add(new ChunkSqlType(i, "'"+sqlData.getValue().toString()+"'"));
+            chunkSqlTypes.add(new ChunkSqlType(i, sqlData.getValue().toString()));
             i++;
         }
-        String command = "SELECT "+column+" FROM "+tableName+" WHERE" + sqlCommand.toString();
+        String command = "SELECT " + column + " FROM " + conversionTableName(tableName) + " WHERE " + sqlCommand;
         return this.getData(command, chunkSqlTypes.toArray(new ChunkSqlType[0]));
+    }
+
+    /**
+     * 替换特殊符号并添加`符号，规避mysql保留字
+     *
+     * @param tableName 表名
+     * @return 处理后的表名
+     */
+    @NotNull
+    private static String conversionTableName(@NotNull String tableName) {
+        if (tableName.startsWith("`") && tableName.endsWith("`")) {
+            tableName = tableName.substring(1, tableName.length() - 1);
+        }
+        return "`" + tableName.trim().replaceAll("\\\\", "\\\\\\\\")
+                .replace("_", "\\_").replace("'", "\\'")
+                .replace("%", "\\%").replace("*", "\\*") + "`";
     }
 
 

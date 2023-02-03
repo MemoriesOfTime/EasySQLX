@@ -9,6 +9,7 @@ import com.smallaswater.easysql.mysql.utils.TableType;
 import com.smallaswater.easysql.mysql.utils.UserData;
 import com.smallaswater.easysql.v3.mysql.utils.SelectType;
 import lombok.Getter;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.LinkedList;
 
@@ -39,7 +40,7 @@ public class UseTableSqlManager extends SqlManager {
 
     @Deprecated //对于UseTableSqlManager来说不推荐使用此方法
     @Override
-    public boolean createColumn(String tableName, TableType tableType) {
+    public boolean createColumn(@NotNull String tableName, @NotNull TableType tableType) {
         return super.createColumn(tableName, tableType);
     }
 
@@ -49,7 +50,7 @@ public class UseTableSqlManager extends SqlManager {
 
     @Deprecated //对于UseTableSqlManager来说不推荐使用此方法
     @Override
-    public void deleteTable(String tableName) {
+    public void deleteTable(@NotNull String tableName) {
         super.deleteTable(tableName);
     }
 
@@ -59,8 +60,8 @@ public class UseTableSqlManager extends SqlManager {
 
     @Deprecated //对于UseTableSqlManager来说不推荐使用此方法
     @Override
-    public boolean isExistColumn(String table, String column) {
-        return super.isExistColumn(table, column);
+    public boolean isExistColumn(@NotNull String tableName, @NotNull String column) {
+        return super.isExistColumn(tableName, column);
     }
 
     /**
@@ -75,7 +76,7 @@ public class UseTableSqlManager extends SqlManager {
 
     @Deprecated //对于UseTableSqlManager来说不推荐使用此方法
     @Override
-    public boolean deleteColumn(String args, String tableName) {
+    public boolean deleteColumn(@NotNull String args, String tableName) {
         return super.deleteColumn(args, tableName);
     }
 

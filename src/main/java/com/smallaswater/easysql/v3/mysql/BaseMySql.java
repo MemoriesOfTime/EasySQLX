@@ -1,7 +1,6 @@
 package com.smallaswater.easysql.v3.mysql;
 
 
-import cn.nukkit.Server;
 import cn.nukkit.plugin.Plugin;
 import com.alibaba.druid.filter.Filter;
 import com.alibaba.druid.wall.WallConfig;
@@ -425,7 +424,6 @@ public abstract class BaseMySql {
      * @return 数据
      */
     public SqlDataList<SqlData> getData(@NotNull String sql, ChunkSqlType... types) {
-        Server.getInstance().getLogger().info(sql);
         return SqlDataManager.selectExecute(this.pool, sql, types);
     }
 

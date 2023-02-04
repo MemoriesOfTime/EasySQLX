@@ -51,7 +51,7 @@ public abstract class BaseMySql {
     }
 
     public static String getDefaultConfig() {
-        return getDefaultTable(new TableType("name", Types.VARCHAR), new TableType("config", Types.TEXT));
+        return getDefaultTable(new TableType("name", DataType.getVARCHAR()), new TableType("config", DataType.getTEXT()));
     }
 
     public static String getDefaultTable(TableType... type) {
@@ -214,7 +214,7 @@ public abstract class BaseMySql {
      * @return 是否创建成功
      */
     public boolean createTable(@NotNull String tableName) {
-        return this.createTable(conversionTableName(tableName), new TableType("id", Types.ID));
+        return this.createTable(conversionTableName(tableName), new TableType("id", DataType.getID()));
     }
 
     /**
@@ -265,7 +265,7 @@ public abstract class BaseMySql {
      * @return 是否成功
      */
     public boolean createColumn(@NotNull String tableName, @NotNull TableType tableType) {
-        String command = "ALTER TABLE " + conversionTableName(tableName) + " ADD " + tableType.getName() + " " + tableType.getType().toString();
+        String command = "ALTER TABLE " + conversionTableName(tableName) + " ADD " + tableType.toString();
         return this.executeSql(command);
     }
 

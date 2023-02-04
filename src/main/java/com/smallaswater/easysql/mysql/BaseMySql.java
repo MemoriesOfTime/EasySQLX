@@ -5,10 +5,7 @@ import cn.nukkit.plugin.Plugin;
 import com.smallaswater.easysql.EasySql;
 import com.smallaswater.easysql.exceptions.MySqlLoginException;
 import com.smallaswater.easysql.mysql.manager.PluginManager;
-import com.smallaswater.easysql.mysql.utils.AbstractOperation;
-import com.smallaswater.easysql.mysql.utils.TableType;
-import com.smallaswater.easysql.mysql.utils.Types;
-import com.smallaswater.easysql.mysql.utils.UserData;
+import com.smallaswater.easysql.mysql.utils.*;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -33,8 +30,8 @@ public abstract class BaseMySql extends AbstractOperation {
     }
 
     public static String getDefaultConfig() {
-        return getDefaultTable(new TableType("name", Types.VARCHAR)
-                , new TableType("config", Types.TEXT));
+        return getDefaultTable(new TableType("name", DataType.getVARCHAR())
+                , new TableType("config", DataType.getTEXT()));
     }
 
     public static String getDefaultTable(TableType... type) {

@@ -2,6 +2,7 @@ package com.smallaswater.easysql.mysql.utils;
 
 
 import com.smallaswater.easysql.mysql.data.SqlDataManager;
+import com.smallaswater.easysql.mysql.utils.apiinfo.ApiDeprecated;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -33,11 +34,22 @@ public abstract class AbstractOperation {
      * @param args  字段名
      * @return 增加一个字段
      */
-
+    @Deprecated
+    @ApiDeprecated(since = "3.0.5", cause = "被createColumn(DataType dataType, String args)代替")
     public boolean createColumn(Types types, String args) {
         return createColumn(types, form, args);
     }
 
+    /**
+     * 给表增加字段
+     *
+     * @param dataType 字段数据类型
+     * @param args  字段名
+     * @return 增加一个字段
+     */
+    public boolean createColumn(DataType dataType, String args) {
+        return createColumn(dataType, form, args);
+    }
 
     /**
      * 给表增加字段
@@ -47,13 +59,31 @@ public abstract class AbstractOperation {
      * @param args  字段名
      * @return 增加一个字段
      */
-
+    @Deprecated
+    @ApiDeprecated(since = "3.0.5", cause = "被createColumn(DataType dataType, String form, String args)代替")
     public boolean createColumn(Types types, String form, String args) {
-
         String command = "ALTER TABLE " + form + " ADD " + args + " " + types.toString();
         return getSqlManager().runSql(command);
     }
 
+    /**
+     * 给表增加字段
+     *
+     * @param form  表单名
+     * @param dataType 字段数据类型
+     * @param args  字段名
+     * @return 增加一个字段
+     */
+    public boolean createColumn(DataType dataType, String form, String args) {
+        String command = "ALTER TABLE " + form + " ADD " + args + " " + dataType.toString();
+        return getSqlManager().runSql(command);
+    }
+
+    /**
+     * 获取表名称
+     *
+     * @return 表名称
+     */
     public String getForm() {
         return form;
     }
@@ -64,7 +94,6 @@ public abstract class AbstractOperation {
      * @param args 字段名
      * @return 删除一个字段
      */
-
     public boolean deleteColumn(String args) {
         String command = "ALTER TABLE " + form + " DROP ?";
         return getSqlManager().runSql(command, new ChunkSqlType(1, args));
@@ -77,12 +106,16 @@ public abstract class AbstractOperation {
      * @param form 表单名称
      * @return 删除一个字段
      */
-
     public boolean deleteColumn(String args, String form) {
         String command = "ALTER TABLE " + form + " DROP ?";
         return getSqlManager().runSql(command, new ChunkSqlType(1, args));
     }
 
+    /**
+     * 获取数据库连接
+     *
+     * @return 数据库连接
+     */
     public Connection getConnection() {
         try {
             return pool.dataSource.getConnection();
@@ -92,14 +125,12 @@ public abstract class AbstractOperation {
         }
     }
 
-
     /**
      * 获取 manager
      */
     public SqlDataManager getSqlManager() {
         return new SqlDataManager(database, form, this);
     }
-
 
     /**
      * 删除表

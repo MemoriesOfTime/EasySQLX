@@ -1,12 +1,15 @@
 package com.smallaswater.easysql.mysql.utils;
 
 
+import com.smallaswater.easysql.mysql.utils.apiinfo.ApiDeprecated;
+
 /**
  * 参数表.. (没有的话执行setSql)
  *
  * @author SmallasWater
  */
-
+@Deprecated
+@ApiDeprecated(since = "3.0.5", cause = "因枚举是唯一的，多个插件使用会导致数据错乱，被DataType类代替")
 public enum Types {
 
     /**
@@ -46,10 +49,10 @@ public enum Types {
      */
     TEXT("text", 1, "not null");
 
-    protected String sql;
-    protected Object size;
-    protected Object otherSize = "";
-    protected Object value;
+    private String sql;
+    private Object size;
+    private Object otherSize = "";
+    private Object value;
 
 
     Types(String sql, Object... value) {

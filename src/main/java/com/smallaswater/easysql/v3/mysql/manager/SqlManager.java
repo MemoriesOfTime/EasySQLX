@@ -24,6 +24,13 @@ public class SqlManager extends BaseMySql {
         }
     }
 
+    public SqlManager(@NotNull Plugin plugin, @NotNull UserData data, @NotNull String connectionParameters) throws MySqlLoginException {
+        super(plugin, data, connectionParameters);
+        if (this.connect()) {
+            this.isEnable = true;
+        }
+    }
+
     public boolean isEnable() {
         return isEnable;
     }

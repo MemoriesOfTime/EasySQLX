@@ -28,6 +28,11 @@ public class UseTableSqlManager extends SqlManager {
         this.tableName = tableName;
     }
 
+    public UseTableSqlManager(Plugin plugin, UserData data, String tableName, String connectionParameters) throws MySqlLoginException {
+        super(plugin, data, connectionParameters);
+        this.tableName = tableName;
+    }
+
     /**
      * 给表增加字段
      *

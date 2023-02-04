@@ -30,15 +30,24 @@ import java.util.Map;
  */
 public abstract class BaseMySql {
 
-    private final UserData data;
-
     private final Plugin plugin;
+    private final UserData data;
+    private final String connectionParameters;
 
     protected LoginPool pool;
 
     public BaseMySql(@NotNull Plugin plugin, @NotNull UserData data) {
-        this.data = data;
+        this(plugin, data, null);
+    }
+
+    public BaseMySql(@NotNull Plugin plugin, @NotNull UserData data, String connectionParameters) {
         this.plugin = plugin;
+        this.data = data;
+        if (connectionParameters == null || connectionParameters.trim().isEmpty()) {
+            this.connectionParameters = "&autoReconnect=true&failOverReadOnly=false&serverTimezone=GMT&characterEncoding=utf8&useSSL=false";
+        }else {
+            this.connectionParameters = connectionParameters;
+        }
     }
 
     public static String getDefaultConfig() {
@@ -68,9 +77,10 @@ public abstract class BaseMySql {
         Connection connection = null;
         try {
             this.pool = EasySql.getLoginPool(data);
+            this.pool.setManager(this);
             Class.forName("com.mysql.cj.jdbc.Driver");
             this.pool.dataSource.setDriverClassName("com.mysql.cj.jdbc.Driver");
-            this.pool.dataSource.setUrl("jdbc:mysql://" + this.data.getHost() + ':' + this.data.getPort() + '/' + this.data.getDatabase() + "?&autoReconnect=true&failOverReadOnly=false&serverTimezone=GMT&characterEncoding=utf8&useSSL=false");
+            this.pool.dataSource.setUrl("jdbc:mysql://" + this.data.getHost() + ':' + this.data.getPort() + '/' + this.data.getDatabase() + "?" + this.connectionParameters);
             this.pool.dataSource.setUsername(this.data.getUser());
             this.pool.dataSource.setPassword(this.data.getPassWorld());
             this.pool.dataSource.setInitialSize(3);
@@ -93,16 +103,8 @@ public abstract class BaseMySql {
                 plugin.getLogger().info("无法连接数据库");
             }
         } catch (Exception e) {
-            e.printStackTrace();
-            plugin.getLogger().info("连接数据库出现异常...");
-        } finally {
-            if (connection != null) {
-                try {
-                    connection.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
+            plugin.getLogger().error("连接数据库出现异常...", e);
+            this.shutdown();
         }
         throw new MySqlLoginException();
     }
@@ -155,7 +157,7 @@ public abstract class BaseMySql {
     public void shutdown() {
         if (this.pool != null) {
             this.pool.dataSource.close();
-            this.plugin.getLogger().info(" 已断开数据库连接");
+            this.plugin.getLogger().info("已断开数据库连接");
         }
     }
 

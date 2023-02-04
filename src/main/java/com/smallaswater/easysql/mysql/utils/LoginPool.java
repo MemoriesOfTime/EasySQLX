@@ -2,7 +2,7 @@ package com.smallaswater.easysql.mysql.utils;
 
 
 import com.alibaba.druid.pool.DruidDataSource;
-import com.smallaswater.easysql.mysql.manager.SqlManager;
+import com.smallaswater.easysql.v3.mysql.BaseMySql;
 
 /**
  * @author SmallasWater
@@ -18,7 +18,7 @@ public class LoginPool {
 
     private final String database;
 
-    private SqlManager manager;
+    private BaseMySql manager;
 
     public LoginPool(String ip, String user, String database) {
         this.ip = ip;
@@ -26,11 +26,11 @@ public class LoginPool {
         this.database = database;
     }
 
-    public void setManager(SqlManager manager) {
+    public void setManager(BaseMySql manager) {
         this.manager = manager;
     }
 
-    public SqlManager getManager() {
+    public BaseMySql getManager() {
         return manager;
     }
 

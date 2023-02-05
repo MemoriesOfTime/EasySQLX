@@ -1,7 +1,7 @@
 package com.smallaswater.easysql.orm.annotations.entity;
 
-import com.smallaswater.easysql.mysql.utils.Types;
-import com.smallaswater.easysql.orm.utils.Options;
+import com.smallaswater.easysql.orm.utils.Kind;
+import com.smallaswater.easysql.orm.utils.Option;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -17,8 +17,7 @@ public @interface Column {
 
     String name(); // 数据表内列的名称
 
-    Types type(); // 类型 (提供了一些常用的选项)
+    Option[] options() default {}; // 格外参数
 
-    Options[] options() default {}; // 格外参数
-
+    Kind kind(); // 类型 (提供了一些常用的选项)
 }

@@ -1,4 +1,4 @@
-package com.smallaswater.easysql.orm.api.example;
+package ormexample;
 
 import com.smallaswater.easysql.orm.annotations.dao.*;
 import com.smallaswater.easysql.orm.api.IDAO;

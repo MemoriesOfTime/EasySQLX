@@ -5,7 +5,6 @@ import com.smallaswater.easysql.EasySql;
 import com.smallaswater.easysql.exceptions.MySqlLoginException;
 import com.smallaswater.easysql.mysql.utils.LoginPool;
 import com.smallaswater.easysql.mysql.utils.UserData;
-import com.smallaswater.easysql.orm.api.example.ExampleDAO;
 import com.smallaswater.easysql.orm.handle.ORMDynaProxyHandle;
 import com.smallaswater.easysql.orm.handle.ORMStdHandle;
 import com.smallaswater.easysql.v3.mysql.manager.SqlManager;

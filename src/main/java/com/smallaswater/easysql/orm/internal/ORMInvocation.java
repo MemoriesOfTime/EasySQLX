@@ -4,13 +4,19 @@ import com.smallaswater.easysql.mysql.data.SqlData;
 import com.smallaswater.easysql.mysql.data.SqlDataList;
 import com.smallaswater.easysql.mysql.utils.ChunkSqlType;
 import com.smallaswater.easysql.orm.annotations.dao.*;
-import com.smallaswater.easysql.orm.annotations.entity.*;
+import com.smallaswater.easysql.orm.annotations.entity.AutoUUIDGenerate;
+import com.smallaswater.easysql.orm.annotations.entity.Column;
+import com.smallaswater.easysql.orm.annotations.entity.Constraint;
+import com.smallaswater.easysql.orm.annotations.entity.ForeignKey;
 import com.smallaswater.easysql.orm.api.IDAO;
-import com.smallaswater.easysql.orm.utils.Options;
+import com.smallaswater.easysql.orm.utils.Option;
 import com.smallaswater.easysql.v3.mysql.manager.SqlManager;
 import javassist.*;
 
-import java.lang.reflect.*;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -93,7 +99,7 @@ public class ORMInvocation<T extends IDAO<?>> implements InvocationHandler {
         Class<?> ret = null;
         try {
 
-            ret = clazz.toClass(this.getClass().getClassLoader());
+            ret = clazz.toClass(this.getClass().getClassLoader(), null);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -225,7 +231,7 @@ public class ORMInvocation<T extends IDAO<?>> implements InvocationHandler {
                 .filter(it -> it.isAnnotationPresent(Column.class))
                 .forEach(it -> {
                     Column column = it.getAnnotation(Column.class);
-                    String option = getOption(column.type().toString(), column.options());
+                    String option = getOption(column.kind().toString(), column.options());
 
                     if (it.isAnnotationPresent(Constraint.class)) {
                         Constraint constraint = it.getAnnotation(Constraint.class);
@@ -325,9 +331,9 @@ public class ORMInvocation<T extends IDAO<?>> implements InvocationHandler {
         return chunks;
     }
 
-    private String getOption(String option, Options[] options) {
+    private String getOption(String option, Option[] options) {
         StringBuilder optionBuilder = new StringBuilder(option);
-        for (Options op : options) {
+        for (Option op : options) {
             switch (op) {
                 case PRIMARY_KEY:
                     if (!optionBuilder.toString().contains("primary key")) {

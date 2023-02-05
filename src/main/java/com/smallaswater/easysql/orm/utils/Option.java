@@ -1,6 +1,6 @@
 package com.smallaswater.easysql.orm.utils;
 
-public enum Options {
+public enum Option {
 
     PRIMARY_KEY("primary key"), // 主键 (当Entity里有 Types.ID 的字段时不能添加)
 
@@ -13,7 +13,7 @@ public enum Options {
 
     private final String sql;
 
-    Options(String sql) {
+    Option(String sql) {
         this.sql = sql;
     }
 

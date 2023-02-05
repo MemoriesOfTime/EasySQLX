@@ -1,8 +1,8 @@
 package com.smallaswater.easysql.orm.api;
 
 
-import com.smallaswater.easysql.mysql.utils.Types;
 import com.smallaswater.easysql.orm.annotations.entity.Column;
+import com.smallaswater.easysql.orm.utils.Kind;
 
 import java.sql.Timestamp;
 
@@ -12,13 +12,13 @@ import java.sql.Timestamp;
 public class Entity {
 
     // 一个 Entity 一定要有一个主键
-    @Column(name = "id", type = Types.ID)
+    @Column(name = "id", kind = Kind.ID)
     public long id;
 
-    @Column(name = "create_at", type = Types.DATETIME)
+    @Column(name = "create_at", kind = Kind.DATETIME)
     public Timestamp CreatedAt;
 
-    @Column(name = "updated_at", type = Types.DATETIME)
+    @Column(name = "updated_at", kind = Kind.DATETIME)
     public Timestamp UpdatedAt;
 
 }

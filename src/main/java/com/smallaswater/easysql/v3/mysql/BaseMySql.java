@@ -226,7 +226,11 @@ public abstract class BaseMySql {
      */
     public boolean createTable(@NotNull String tableName, TableType... tableTypes) {
         if (!this.isExistTable(tableName)) {
-            String command = "CREATE TABLE " + conversionTableName(tableName) + "(" + getDefaultTable(tableTypes) + ")engine=InnoDB default charset=utf8";
+            StringBuilder index = new StringBuilder();
+            for (TableType tableType : tableTypes) {
+                index.append(", INDEX(").append(tableType.getName()).append(")");
+            }
+            String command = "CREATE TABLE " + conversionTableName(tableName) + "(" + getDefaultTable(tableTypes) + index + ")engine=InnoDB default charset=utf8";
             return this.executeSql(command);
         }
         return false;

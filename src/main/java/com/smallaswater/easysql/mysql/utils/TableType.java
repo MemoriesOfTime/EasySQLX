@@ -10,21 +10,24 @@ import org.jetbrains.annotations.NotNull;
  *
  * @author SmallasWater
  */
+@Getter
 public class TableType {
 
-    @Getter
     private final String name;
-    @Getter
     @Deprecated
     private final Types type;
-
-    @Getter
     private final DataType dataType;
+    private final boolean isIndex;
 
     public TableType(@NotNull String name, @NotNull DataType dataType) {
+        this(name, dataType, false);
+    }
+
+    public TableType(@NotNull String name, @NotNull DataType dataType, boolean isIndex) {
         this.name = name;
         this.type = null;
         this.dataType = dataType;
+        this.isIndex = isIndex;
     }
 
     @Deprecated
@@ -32,6 +35,7 @@ public class TableType {
         this.name = name;
         this.type = type;
         this.dataType = null;
+        this.isIndex = false;
     }
 
     public String toTable() {

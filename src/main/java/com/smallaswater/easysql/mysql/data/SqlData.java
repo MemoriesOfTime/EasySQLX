@@ -72,6 +72,14 @@ public class SqlData {
         return Double.parseDouble(this.get(key, defaultValue).toString());
     }
 
+    public long getLong(String key) {
+        return this.getLong(key, 0L);
+    }
+
+    public long getLong(String key, long defaultValue) {
+        return Long.parseLong(this.get(key, defaultValue).toString());
+    }
+
     /**
      * 这个似乎没啥用
      * */

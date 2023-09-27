@@ -6,7 +6,7 @@
 
     <groupId>com.smallaswater.easysql</groupId>
     <artifactId>EasyMySQL</artifactId>
-    <version>3.0.6<!-- -SNAPSHOT--></version>
+    <version>3.0.7-SNAPSHOT</version>
 
     <name>EasyMySQL</name>
     <description>EasyMySQL -- MySQL tool for Nukkit</description>

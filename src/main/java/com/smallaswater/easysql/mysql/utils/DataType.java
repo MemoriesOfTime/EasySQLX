@@ -25,6 +25,11 @@ public class DataType {
     private static final DataType INT = new DataType("int", 10, "not null");
 
     /**
+     * 长整数
+     */
+    private static final DataType BIGINT = new DataType("bigint", "", "not null");
+
+    /**
      * 小数
      */
     private static final DataType DOUBLE = new DataType("double", 255, 2, "not null");
@@ -61,6 +66,10 @@ public class DataType {
 
     public static DataType getINT() {
         return INT.clone();
+    }
+
+    public static DataType getBIGINT() {
+        return BIGINT.clone();
     }
 
     public static DataType getDOUBLE() {

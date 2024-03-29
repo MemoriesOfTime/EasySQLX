@@ -13,6 +13,7 @@ import java.util.List;
  *
  * @author 若水
  */
+@Deprecated
 public class PluginManager {
     private static final HashMap<Plugin, BaseMySql> CONNECTION = new HashMap<>();
 

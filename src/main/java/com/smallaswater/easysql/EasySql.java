@@ -7,8 +7,8 @@ import com.smallaswater.easysql.mysql.manager.PluginManager;
 import com.smallaswater.easysql.mysql.utils.LoginPool;
 import com.smallaswater.easysql.mysql.utils.UserData;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
-
 
 /**
  * @author SmallasWater
@@ -22,6 +22,16 @@ public class EasySql extends PluginBase {
         this.getLogger().info("已加载 EasyMySQL 插件 v"+this.getDescription().getVersion());
     }
 
+    @Override
+    public void onDisable() {
+        // 无法保证在所有插件卸载后再关闭数据库连接
+        /*for (BaseMySql mysql : PluginManager.getList()) {
+            if (mysql != null) {
+                mysql.shutdown();
+            }
+        }*/
+    }
+
     public static LoginPool getLoginPool(UserData data) {
         LoginPool pool = new LoginPool(data.getHost(), data.getUser(), data.getDatabase());
         if(!pools.contains(pool)){
@@ -30,13 +40,7 @@ public class EasySql extends PluginBase {
         return pools.get(pools.indexOf(pool));
     }
 
-
-    @Override
-    public void onDisable() {
-        for (BaseMySql mysql : PluginManager.getList()) {
-            if (mysql != null) {
-                mysql.shutdown();
-            }
-        }
+    public static SQLiteHelper getSQLiteHelper(String path) throws SQLException, ClassNotFoundException {
+        return new SQLiteHelper(path);
     }
 }

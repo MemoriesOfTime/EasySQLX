@@ -10,6 +10,7 @@ import com.smallaswater.easysql.mysql.utils.UserData;
  *
  * @author SmallasWater
  */
+@Deprecated
 public class UseTableSqlManager extends BaseMySql {
 
     public UseTableSqlManager(Plugin plugin, UserData data, String tableName) throws MySqlLoginException {

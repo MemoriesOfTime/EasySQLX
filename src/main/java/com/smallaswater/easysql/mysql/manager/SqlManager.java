@@ -11,6 +11,7 @@ import com.smallaswater.easysql.mysql.utils.UserData;
 /**
  * @author SmallasWater
  */
+@Deprecated
 public class SqlManager extends BaseMySql {
 
     private boolean isEnable = false;

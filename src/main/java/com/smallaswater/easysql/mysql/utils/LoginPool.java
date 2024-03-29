@@ -1,8 +1,8 @@
 package com.smallaswater.easysql.mysql.utils;
 
 
-import com.alibaba.druid.pool.DruidDataSource;
 import com.smallaswater.easysql.v3.mysql.BaseMySql;
+import com.zaxxer.hikari.HikariDataSource;
 
 /**
  * @author SmallasWater
@@ -11,7 +11,7 @@ import com.smallaswater.easysql.v3.mysql.BaseMySql;
  */
 public class LoginPool {
 
-    public DruidDataSource dataSource = new DruidDataSource();
+    public HikariDataSource dataSource;
     private final String user;
 
     private final String ip;

@@ -2,9 +2,6 @@ package com.smallaswater.easysql.v3.mysql;
 
 
 import cn.nukkit.plugin.Plugin;
-import com.alibaba.druid.filter.Filter;
-import com.alibaba.druid.wall.WallConfig;
-import com.alibaba.druid.wall.WallFilter;
 import com.smallaswater.easysql.EasySql;
 import com.smallaswater.easysql.exceptions.MySqlLoginException;
 import com.smallaswater.easysql.mysql.data.SqlData;
@@ -13,6 +10,8 @@ import com.smallaswater.easysql.mysql.utils.*;
 import com.smallaswater.easysql.v3.mysql.data.SqlDataManager;
 import com.smallaswater.easysql.v3.mysql.manager.PluginManager;
 import com.smallaswater.easysql.v3.mysql.utils.SelectType;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import org.jetbrains.annotations.NotNull;
 
 import java.sql.Connection;
@@ -79,11 +78,13 @@ public abstract class BaseMySql {
             this.pool = EasySql.getLoginPool(data);
             this.pool.setManager(this);
             Class.forName("com.mysql.cj.jdbc.Driver");
-            this.pool.dataSource.setDriverClassName("com.mysql.cj.jdbc.Driver");
-            this.pool.dataSource.setUrl("jdbc:mysql://" + this.data.getHost() + ':' + this.data.getPort() + '/' + this.data.getDatabase() + "?" + this.connectionParameters);
-            this.pool.dataSource.setUsername(this.data.getUser());
-            this.pool.dataSource.setPassword(this.data.getPassWorld());
-            this.pool.dataSource.setInitialSize(3);
+            HikariConfig config = new HikariConfig();
+            config.setDriverClassName("com.mysql.cj.jdbc.Driver");
+            config.setJdbcUrl("jdbc:mysql://" + this.data.getHost() + ':' + this.data.getPort() + '/' + this.data.getDatabase() + "?" + this.connectionParameters);
+            config.setUsername(this.data.getUser());
+            config.setPassword(this.data.getPassWorld());
+            this.pool.dataSource = new HikariDataSource(config);
+            /*this.pool.dataSource.setInitialSize(3);
             this.pool.dataSource.setMinIdle(1);
             this.pool.dataSource.setMaxActive(30);
             this.pool.dataSource.setValidationQuery("SELECT 1");
@@ -92,7 +93,7 @@ public abstract class BaseMySql {
             this.pool.dataSource.setTimeBetweenConnectErrorMillis(180000);
             this.pool.dataSource.setConnectionErrorRetryAttempts(3);
             this.pool.dataSource.addFilters("wall");
-
+*/
             //TODO 修复链接判断
             connection = this.getConnection();
             if (connection != null && !connection.isClosed()) {
@@ -107,39 +108,6 @@ public abstract class BaseMySql {
             this.shutdown();
         }
         throw new MySqlLoginException();
-    }
-
-    /**
-     * 启用WallFilter
-     *
-     * @return 是否启用成功
-     */
-    public boolean enableWallFilter() {
-        for (Filter filter : this.pool.dataSource.getProxyFilters()) {
-            if (filter instanceof WallFilter) {
-                WallFilter wallFilter = (WallFilter) filter;
-                WallConfig config = new WallConfig();
-                wallFilter.setConfig(config);
-                wallFilter.init(this.pool.dataSource);
-                return wallFilter.isInited();
-            }
-        }
-        return false;
-    }
-
-    /**
-     * 获取WallFilter配置
-     *
-     * @return WallFilter配置
-     */
-    public WallConfig getWallFilterConfig() {
-        for (Filter filter : this.pool.dataSource.getProxyFilters()) {
-            if (filter instanceof WallFilter) {
-                WallFilter wallFilter = (WallFilter) filter;
-                return wallFilter.getConfig();
-            }
-        }
-        return null;
     }
 
     public Connection getConnection() {

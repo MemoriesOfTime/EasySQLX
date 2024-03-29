@@ -6,7 +6,7 @@
 
     <groupId>com.smallaswater.easysql</groupId>
     <artifactId>EasyMySQL</artifactId>
-    <version>3.0.7<!-- -SNAPSHOT--></version>
+    <version>3.1.0-b-SNAPSHOT</version>
 
     <name>EasyMySQL</name>
     <description>EasyMySQL -- MySQL tool for Nukkit</description>
@@ -97,7 +97,7 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.18.24</version>
+            <version>1.18.30</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -107,9 +107,15 @@
             <scope>compile</scope>
         </dependency>
         <dependency>
-            <groupId>com.alibaba</groupId>
-            <artifactId>druid</artifactId>
-            <version>1.2.14</version>
+            <groupId>org.xerial</groupId>
+            <artifactId>sqlite-jdbc</artifactId>
+            <version>3.34.0</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+            <version>4.0.3</version>
             <scope>compile</scope>
         </dependency>
         <dependency>

@@ -6,6 +6,8 @@ import com.smallaswater.easysql.EasySql;
 import com.smallaswater.easysql.exceptions.MySqlLoginException;
 import com.smallaswater.easysql.mysql.manager.PluginManager;
 import com.smallaswater.easysql.mysql.utils.*;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -15,6 +17,7 @@ import java.sql.SQLException;
  *
  * @author 楠木i，若水
  */
+@Deprecated
 public abstract class BaseMySql extends AbstractOperation {
 
     private final UserData data;
@@ -55,33 +58,30 @@ public abstract class BaseMySql extends AbstractOperation {
             this.pool = EasySql.getLoginPool(data);
 
             Class.forName("com.mysql.cj.jdbc.Driver");
-            this.pool.dataSource.setDriverClassName("com.mysql.cj.jdbc.Driver");
-            this.pool.dataSource.setUrl("jdbc:mysql://" + this.data.getHost() + ':' + this.data.getPort() + '/' + this.data.getDatabase() + "?&autoReconnect=true&failOverReadOnly=false&serverTimezone=GMT&characterEncoding=utf8&useSSL=false");
-            this.pool.dataSource.setUsername(this.data.getUser());
-            this.pool.dataSource.setPassword(this.data.getPassWorld());
-            this.pool.dataSource.setInitialSize(3);
+            HikariConfig config = new HikariConfig();
+            config.setDriverClassName("com.mysql.cj.jdbc.Driver");
+            config.setJdbcUrl("jdbc:mysql://" + this.data.getHost() + ':' + this.data.getPort() + '/' + this.data.getDatabase() + "?&autoReconnect=true&failOverReadOnly=false&serverTimezone=GMT&characterEncoding=utf8&useSSL=false");
+            config.setUsername(this.data.getUser());
+            config.setPassword(this.data.getPassWorld());
+            this.pool.dataSource = new HikariDataSource(config);
+            /*this.pool.dataSource.setInitialSize(3);
             this.pool.dataSource.setMinIdle(1);
             this.pool.dataSource.setMaxActive(30);
             this.pool.dataSource.setValidationQuery("SELECT 1");
-            this.pool.dataSource.setTimeBetweenEvictionRunsMillis(180000);
+            this.pool.dataSource.setTimeBetweenEvictionRunsMillis(180000);*/
 
 
-//            dataSource.
             connection = this.getConnection();
             if (connection != null) {
                 plugin.getLogger().info("已连接数据库");
                 PluginManager.connect(plugin, this);
-
-
                 return true;
             } else {
                 plugin.getLogger().info(" 无法连接数据库");
             }
-        } catch (ClassNotFoundException var2) {
-            var2.printStackTrace();
-            plugin.getLogger().info("连接数据库出现异常...");
+        } catch (Exception e) {
+            plugin.getLogger().error("连接数据库出现异常...", e);
         } finally {
-
             if (connection != null) {
                 try {
                     connection.close();
@@ -98,9 +98,8 @@ public abstract class BaseMySql extends AbstractOperation {
         try {
             this.pool.dataSource.getConnection().close();
             plugin.getLogger().info(" 已断开数据库连接");
-        } catch (SQLException var2) {
-            var2.printStackTrace();
+        } catch (SQLException e) {
+            plugin.getLogger().error("断开数据库连接出现异常...", e);
         }
-
     }
 }

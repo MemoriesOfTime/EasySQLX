@@ -1,9 +1,11 @@
 package com.smallaswater.easysql.mysql.data;
 
 
+import java.lang.reflect.Field;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author SmallasWater
@@ -195,6 +197,18 @@ public class SqlData {
         return str.substring(0, str.length() - 1);
     }
 
+    public String toUpdateValue() {
+        StringBuilder builder = new StringBuilder();
+        for (Map.Entry<String, Object> entry : data.entrySet()) {
+            if ("id".equalsIgnoreCase(entry.getKey())) {
+                continue;
+            }
+            builder.append(entry.getKey()).append(" = '").append(entry.getValue().toString()).append("',");
+        }
+        String str = builder.toString();
+        return str.substring(0, str.length() - 1);
+    }
+
     @Override
     public String toString() {
         StringBuilder builder = new StringBuilder("[");
@@ -208,5 +222,35 @@ public class SqlData {
         }
         builder.append("]");
         return builder.toString();
+    }
+
+    public static <T> SqlData classToSqlData(T object) {
+        SqlData data = new SqlData();
+        for (Field field : object.getClass().getFields()) {
+            try {
+
+                if (field.getType() == int.class || field.getType() == long.class) {
+                    if ("id".equalsIgnoreCase(field.getName())) {
+                        continue;
+                    }
+                    data.put(field.getName(), field.getInt(object));
+                } else {
+                    data.put(field.getName(), field.get(object));
+                }
+            } catch (Exception ignore) {
+            }
+        }
+        return data;
+    }
+
+    public static <T> SqlData classToSqlDataAsId(T object) {
+        SqlData data = new SqlData();
+        for (Field field : object.getClass().getFields()) {
+            try {
+                data.put(field.getName(), field.getInt(object));
+            } catch (Exception ignore) {
+            }
+        }
+        return data;
     }
 }

@@ -5,9 +5,8 @@ import com.smallaswater.easysql.exceptions.MySqlLoginException;
 import com.smallaswater.easysql.mysql.data.SqlData;
 import com.smallaswater.easysql.mysql.data.SqlDataList;
 import com.smallaswater.easysql.mysql.utils.TableType;
-import com.smallaswater.easysql.mysql.utils.Types;
 import com.smallaswater.easysql.mysql.utils.UserData;
-import com.smallaswater.easysql.v3.mysql.manager.SqlManager;
+import com.smallaswater.easysql.mysql.manager.SqlManager;
 import com.smallaswater.easysql.v3.mysql.utils.SelectType;
 
 /**

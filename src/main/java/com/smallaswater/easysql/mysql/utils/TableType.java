@@ -14,8 +14,6 @@ import org.jetbrains.annotations.NotNull;
 public class TableType {
 
     private final String name;
-    @Deprecated
-    private final Types type;
     private final DataType dataType;
     private final boolean isIndex;
 
@@ -25,23 +23,11 @@ public class TableType {
 
     public TableType(@NotNull String name, @NotNull DataType dataType, boolean isIndex) {
         this.name = name;
-        this.type = null;
         this.dataType = dataType;
         this.isIndex = isIndex;
     }
 
-    @Deprecated
-    public TableType(@NotNull String name, @NotNull Types type) {
-        this.name = name;
-        this.type = type;
-        this.dataType = null;
-        this.isIndex = false;
-    }
-
     public String toTable() {
-        if (dataType != null) {
-            return name + " " + dataType;
-        }
-        return name + " " + type.toString();
+        return name + " " + dataType;
     }
 }

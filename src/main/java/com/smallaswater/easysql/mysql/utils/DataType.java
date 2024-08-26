@@ -1,6 +1,6 @@
 package com.smallaswater.easysql.mysql.utils;
 
-import com.smallaswater.easysql.mysql.utils.apiinfo.ApiInfo;
+import com.smallaswater.easysql.common.utils.apiinfo.ApiInfo;
 
 import java.util.Objects;
 

@@ -1,7 +1,7 @@
 package com.smallaswater.easysql.mysql.utils;
 
 
-import com.smallaswater.easysql.v3.mysql.BaseMySql;
+import com.smallaswater.easysql.mysql.BaseMySql;
 import com.zaxxer.hikari.HikariDataSource;
 
 /**

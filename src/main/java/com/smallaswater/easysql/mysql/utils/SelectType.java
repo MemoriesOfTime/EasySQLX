@@ -1,16 +1,15 @@
-package com.smallaswater.easysql.v3.mysql.utils;
+package com.smallaswater.easysql.mysql.utils;
 
 import lombok.Getter;
 
 /**
  * @author lt_name
  */
+@Getter
 public class SelectType {
-    @Getter
+
     private final String key;
-    @Getter
     private final String value;
-    @Getter
     private final Types type;
 
     public SelectType(String key, String value) {

@@ -1,7 +1,7 @@
 package com.smallaswater.easysql.orm.internal;
 
-import com.smallaswater.easysql.mysql.data.SqlData;
-import com.smallaswater.easysql.mysql.data.SqlDataList;
+import com.smallaswater.easysql.common.data.SqlData;
+import com.smallaswater.easysql.common.data.SqlDataList;
 import com.smallaswater.easysql.mysql.utils.ChunkSqlType;
 import com.smallaswater.easysql.orm.annotations.dao.*;
 import com.smallaswater.easysql.orm.annotations.entity.AutoUUIDGenerate;
@@ -10,7 +10,7 @@ import com.smallaswater.easysql.orm.annotations.entity.Constraint;
 import com.smallaswater.easysql.orm.annotations.entity.ForeignKey;
 import com.smallaswater.easysql.orm.api.IDAO;
 import com.smallaswater.easysql.orm.utils.Option;
-import com.smallaswater.easysql.v3.mysql.manager.SqlManager;
+import com.smallaswater.easysql.mysql.manager.SqlManager;
 import javassist.*;
 
 import java.lang.reflect.Field;
@@ -83,11 +83,11 @@ public class ORMInvocation<T extends IDAO<?>> implements InvocationHandler {
         clazz.setInterfaces(new CtClass[]{interf});
 
         try {
-            clazz.addField(CtField.make("public com.smallaswater.easysql.v3.mysql.manager.SqlManager manager;", clazz));
+            clazz.addField(CtField.make("public com.smallaswater.easysql.mysql.manager.SqlManager manager;", clazz));
             clazz.addField(CtField.make("public java.lang.String table;", clazz));
 
             // 构造被拦截的方法，模拟拦截
-            clazz.addMethod(CtMethod.make("public com.smallaswater.easysql.v3.mysql.manager.SqlManager getManager(){return manager;}", clazz));
+            clazz.addMethod(CtMethod.make("public com.smallaswater.easysql.mysql.manager.SqlManager getManager(){return manager;}", clazz));
             clazz.addMethod(CtMethod.make("public java.lang.String getTable(){return table;}", clazz));
             clazz.addMethod(CtMethod.make("public java.lang.String toString(){return \"Table: \" + table + \" Manager: \" + manager;}", clazz));
 

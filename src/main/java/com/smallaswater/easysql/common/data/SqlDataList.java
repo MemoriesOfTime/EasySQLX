@@ -1,4 +1,4 @@
-package com.smallaswater.easysql.mysql.data;
+package com.smallaswater.easysql.common.data;
 
 import com.smallaswater.easysql.mysql.utils.ChunkSqlType;
 

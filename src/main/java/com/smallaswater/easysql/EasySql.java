@@ -2,10 +2,9 @@ package com.smallaswater.easysql;
 
 
 import cn.nukkit.plugin.PluginBase;
-import com.smallaswater.easysql.mysql.BaseMySql;
-import com.smallaswater.easysql.mysql.manager.PluginManager;
 import com.smallaswater.easysql.mysql.utils.LoginPool;
 import com.smallaswater.easysql.mysql.utils.UserData;
+import com.smallaswater.easysql.sqlite.SQLiteHelper;
 
 import java.sql.SQLException;
 import java.util.ArrayList;

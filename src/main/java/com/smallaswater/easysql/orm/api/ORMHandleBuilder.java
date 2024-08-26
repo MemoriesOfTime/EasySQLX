@@ -7,7 +7,7 @@ import com.smallaswater.easysql.mysql.utils.LoginPool;
 import com.smallaswater.easysql.mysql.utils.UserData;
 import com.smallaswater.easysql.orm.handle.ORMDynaProxyHandle;
 import com.smallaswater.easysql.orm.handle.ORMStdHandle;
-import com.smallaswater.easysql.v3.mysql.manager.SqlManager;
+import com.smallaswater.easysql.mysql.manager.SqlManager;
 import lombok.Setter;
 
 public class ORMHandleBuilder {

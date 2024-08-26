@@ -1,6 +1,6 @@
-package com.smallaswater.easysql;
+package com.smallaswater.easysql.sqlite;
 
-import com.smallaswater.easysql.mysql.data.SqlData;
+import com.smallaswater.easysql.common.data.SqlData;
 
 import java.lang.reflect.Field;
 import java.sql.*;

@@ -1,4 +1,4 @@
-package com.smallaswater.easysql.mysql.utils.apiinfo;
+package com.smallaswater.easysql.common.utils.apiinfo;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

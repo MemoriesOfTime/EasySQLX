@@ -1,4 +1,4 @@
-package com.smallaswater.easysql.mysql.data;
+package com.smallaswater.easysql.common.data;
 
 
 import java.lang.reflect.Field;
@@ -35,8 +35,6 @@ public class SqlData {
         data.put(column.toLowerCase(), object);
         return this;
     }
-
-
 
     /**
      * 获取数据
@@ -125,7 +123,6 @@ public class SqlData {
         Object val = data.get(key);
         return val instanceof Boolean;
     }
-
 
     /**
      * 获取所有字段名

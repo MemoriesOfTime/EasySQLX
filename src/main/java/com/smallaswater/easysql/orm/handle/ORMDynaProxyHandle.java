@@ -2,7 +2,7 @@ package com.smallaswater.easysql.orm.handle;
 
 import com.smallaswater.easysql.orm.api.IDAO;
 import com.smallaswater.easysql.orm.internal.ORMInvocation;
-import com.smallaswater.easysql.v3.mysql.manager.SqlManager;
+import com.smallaswater.easysql.mysql.manager.SqlManager;
 
 import java.lang.reflect.Proxy;
 

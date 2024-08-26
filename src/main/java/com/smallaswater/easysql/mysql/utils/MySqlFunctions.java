@@ -16,8 +16,6 @@ public class MySqlFunctions {
     public static final String MIN = "MIN(?)";
     public static final String MAX = "MAX(?)";
     public static final String SUM = "SUM(?)";
-
-
     public static final String MD5 = "md5(?)";
 
 
@@ -63,7 +61,7 @@ public class MySqlFunctions {
         MD5(MySqlFunctions.MD5);
 
 
-        protected String command;
+        private final String command;
 
         SqlFunctions(String command) {
             this.command = command;

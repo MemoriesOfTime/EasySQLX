@@ -1,7 +1,7 @@
 package ormexample;
 
-import com.smallaswater.easysql.mysql.utils.UserData;
-import com.smallaswater.easysql.orm.api.ORMHandleBuilder;
+import com.smallaswater.easysqlx.mysql.utils.UserData;
+import com.smallaswater.easysqlx.orm.api.ORMHandleBuilder;
 
 import java.util.List;
 

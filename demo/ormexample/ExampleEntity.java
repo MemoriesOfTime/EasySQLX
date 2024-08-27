@@ -1,8 +1,8 @@
 package ormexample;
 
-import com.smallaswater.easysql.orm.annotations.entity.*;
-import com.smallaswater.easysql.orm.utils.Kind;
-import com.smallaswater.easysql.orm.utils.Option;
+import com.smallaswater.easysqlx.orm.annotations.entity.*;
+import com.smallaswater.easysqlx.orm.utils.Kind;
+import com.smallaswater.easysqlx.orm.utils.Option;
 
 public class ExampleEntity {
 

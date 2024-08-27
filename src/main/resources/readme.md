@@ -100,7 +100,7 @@
 >
 > 更多的注解请看: https://github.com/iGxnon/EasyMySQL/tree/feat-orm/src/main/java/com/smallaswater/easysql/orm/annotations/entity
 
-> 然后创建一个 接口(interface) 去继承我们的 **com.smallaswater.easysql.orm.api.IDAO**
+> 然后创建一个 接口(interface) 去继承我们的 **com.smallaswater.easysqlx.orm.api.IDAO**
 >
 > IDAO的范型需要确定为你上面定义的 Entity
 >

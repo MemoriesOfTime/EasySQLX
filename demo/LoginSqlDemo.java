@@ -1,13 +1,13 @@
 package org.easymysql.demo;
 
 import cn.nukkit.plugin.PluginBase;
-import com.smallaswater.easysql.exceptions.MySqlLoginException;
-import com.smallaswater.easysql.mysql.data.SqlData;
-import com.smallaswater.easysql.mysql.data.SqlDataList;
-import com.smallaswater.easysql.mysql.utils.TableType;
-import com.smallaswater.easysql.mysql.utils.UserData;
-import com.smallaswater.easysql.mysql.manager.SqlManager;
-import com.smallaswater.easysql.v3.mysql.utils.SelectType;
+import com.smallaswater.easysqlx.exceptions.MySqlLoginException;
+import com.smallaswater.easysqlx.mysql.data.SqlData;
+import com.smallaswater.easysqlx.mysql.data.SqlDataList;
+import com.smallaswater.easysqlx.mysql.utils.TableType;
+import com.smallaswater.easysqlx.mysql.utils.UserData;
+import com.smallaswater.easysqlx.mysql.manager.SqlManager;
+import com.smallaswater.easysqlx.v3.mysql.utils.SelectType;
 
 /**
  * 连接mysql

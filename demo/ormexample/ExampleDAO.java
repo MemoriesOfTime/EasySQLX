@@ -1,7 +1,7 @@
 package ormexample;
 
-import com.smallaswater.easysql.orm.annotations.dao.*;
-import com.smallaswater.easysql.orm.api.IDAO;
+import com.smallaswater.easysqlx.orm.annotations.dao.*;
+import com.smallaswater.easysqlx.orm.api.IDAO;
 
 import java.util.List;
 

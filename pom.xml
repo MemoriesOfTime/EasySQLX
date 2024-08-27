@@ -5,12 +5,12 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.smallaswater.easysql</groupId>
-    <artifactId>EasySQL</artifactId>
+    <artifactId>EasySQLX</artifactId>
     <version>4.0.0-SNAPSHOT</version>
 
-    <name>EasySQL</name>
-    <description>EasyMySQL -- MySQL tool for Nukkit</description>
-    <url>https://github.com/MemoriesOfTime/EasySQL</url>
+    <name>EasySQLX</name>
+    <description>EasySQLX -- MySQL tool for Nukkit</description>
+    <url>https://github.com/MemoriesOfTime/EasySQLX</url>
 
     <licenses>
         <license>
@@ -21,9 +21,9 @@
     </licenses>
 
     <scm>
-        <connection>https://github.com/MemoriesOfTime/EasySQL.git</connection>
-        <developerConnection>scm:git:git@github.com:MemoriesOfTime/EasySQL.git</developerConnection>
-        <url>https://github.com/MemoriesOfTime/EasySQL</url>
+        <connection>https://github.com/MemoriesOfTime/EasySQLX.git</connection>
+        <developerConnection>scm:git:git@github.com:MemoriesOfTime/EasySQLX.git</developerConnection>
+        <url>https://github.com/MemoriesOfTime/EasySQLX</url>
     </scm>
 
     <developers>

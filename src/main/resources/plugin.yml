@@ -1,5 +1,5 @@
 name: EasySQL
-main: com.smallaswater.easysql.EasySql
+main: com.smallaswater.easysqlx.EasySql
 version: "4.0.0-SNAPSHOT"
 api:
   - 1.0.9

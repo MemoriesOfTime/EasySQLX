@@ -8,9 +8,9 @@
     <artifactId>EasySQL</artifactId>
     <version>4.0.0-SNAPSHOT</version>
 
-    <name>EasyMySQL</name>
+    <name>EasySQL</name>
     <description>EasyMySQL -- MySQL tool for Nukkit</description>
-    <url>https://github.com/SmallasWater/EasyMySQL</url>
+    <url>https://github.com/MemoriesOfTime/EasySQL</url>
 
     <licenses>
         <license>
@@ -21,9 +21,9 @@
     </licenses>
 
     <scm>
-        <connection>https://github.com/SmallasWater/EasyMySQL.git</connection>
-        <developerConnection>scm:git:git@github.com:SmallasWater/EasyMySQL.git</developerConnection>
-        <url>https://github.com/SmallasWater/EasyMySQL</url>
+        <connection>https://github.com/MemoriesOfTime/EasySQL.git</connection>
+        <developerConnection>scm:git:git@github.com:MemoriesOfTime/EasySQL.git</developerConnection>
+        <url>https://github.com/MemoriesOfTime/EasySQL</url>
     </scm>
 
     <developers>
@@ -74,16 +74,28 @@
                 <enabled>true</enabled>
             </snapshots>
         </repository>
+                <repository>
+            <id>repo-lanink-cn</id>
+            <url>https://repo.lanink.cn/repository/maven-public/</url>
+        </repository>
     </repositories>
 
     <distributionManagement>
-        <snapshotRepository>
+        <!--<snapshotRepository>
             <id>oss</id>
             <url>https://s01.oss.sonatype.org/content/repositories/snapshots/</url>
         </snapshotRepository>
         <repository>
             <id>oss</id>
             <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>-->
+        <snapshotRepository>
+            <id>repo-lanink-cn</id>
+            <url>https://repo.lanink.cn/repository/maven-snapshots/</url>
+        </snapshotRepository>
+        <repository>
+            <id>repo-lanink-cn</id>
+            <url>https://repo.lanink.cn/repository/maven-releases/</url>
         </repository>
     </distributionManagement>
 
@@ -133,7 +145,7 @@
     </dependencies>
 
     <build>
-        <finalName>${project.artifactId}_v${project.version}</finalName>
+        <finalName>A_${project.artifactId}_v${project.version}</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

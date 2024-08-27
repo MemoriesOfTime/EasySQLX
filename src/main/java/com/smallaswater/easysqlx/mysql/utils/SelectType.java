@@ -27,6 +27,7 @@ public class SelectType {
         return " WHERE " + this.key + " " + this.type.getSymbol() + " ? ";
     }
 
+    @Getter
     public enum Types {
 
         EQUAL("="),
@@ -36,7 +37,6 @@ public class SelectType {
         EQUAL_OR_GREATER(">="),
         LESS_OR_EQUAL("<=");
 
-        @Getter
         private final String symbol;
 
         Types(String symbol) {

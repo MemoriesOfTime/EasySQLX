@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.smallaswater.easysql</groupId>
+    <groupId>com.smallaswater.easysqlx</groupId>
     <artifactId>EasySQLX</artifactId>
     <version>4.0.0-SNAPSHOT</version>
 
@@ -74,7 +74,7 @@
                 <enabled>true</enabled>
             </snapshots>
         </repository>
-                <repository>
+        <repository>
             <id>repo-lanink-cn</id>
             <url>https://repo.lanink.cn/repository/maven-public/</url>
         </repository>

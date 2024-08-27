@@ -68,10 +68,10 @@ public class SqlDataManager {
                                                      String having,
                                                      ChunkSqlType... types) {
         Objects.requireNonNull(loginPool);
-        if (column != null && !"".equalsIgnoreCase(column.trim())) {
+        if (!"".equalsIgnoreCase(column.trim())) {
             throw new NullPointerException();
         }
-        if (tableName != null && !"".equalsIgnoreCase(tableName.trim())) {
+        if (!"".equalsIgnoreCase(tableName.trim())) {
             throw new NullPointerException();
         }
         String sql = "SELECT " + column + " FROM " + tableName;

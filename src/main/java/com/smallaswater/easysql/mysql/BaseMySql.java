@@ -114,7 +114,7 @@ public abstract class BaseMySql {
         try {
             return pool.dataSource.getConnection();
         } catch (Exception e) {
-            e.printStackTrace();
+            EasySql.getInstance().getLogger().error("获取数据库连接出现异常...", e);
             return null;
         }
     }

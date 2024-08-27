@@ -5,6 +5,7 @@ import cn.nukkit.plugin.PluginBase;
 import com.smallaswater.easysql.mysql.utils.LoginPool;
 import com.smallaswater.easysql.mysql.utils.UserData;
 import com.smallaswater.easysql.sqlite.SQLiteHelper;
+import lombok.Getter;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -14,11 +15,19 @@ import java.util.ArrayList;
  */
 public class EasySql extends PluginBase {
 
+    @Getter
+    private static EasySql instance;
+
     private static final ArrayList<LoginPool> pools = new ArrayList<>();
 
     @Override
+    public void onLoad() {
+        instance = this;
+    }
+
+    @Override
     public void onEnable() {
-        this.getLogger().info("已加载 EasyMySQL 插件 v"+this.getDescription().getVersion());
+        this.getLogger().info("已加载 EasySQL 插件 v" + this.getDescription().getVersion());
     }
 
     @Override

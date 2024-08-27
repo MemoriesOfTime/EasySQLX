@@ -209,7 +209,6 @@ public class SqlData {
     @Override
     public String toString() {
         StringBuilder builder = new StringBuilder("[");
-
         for (String name : data.keySet()) {
             Object o = data.get(name);
             if (o == null) {
@@ -221,13 +220,14 @@ public class SqlData {
         return builder.toString();
     }
 
-    public static <T> SqlData classToSqlData(T object) {
+    public static <T> SqlData classToSqlData(T object) throws IllegalArgumentException {
         SqlData data = new SqlData();
+        boolean hasId = false;
         for (Field field : object.getClass().getFields()) {
             try {
-
                 if (field.getType() == int.class || field.getType() == long.class) {
                     if ("id".equalsIgnoreCase(field.getName())) {
+                        hasId = true;
                         continue;
                     }
                     data.put(field.getName(), field.getInt(object));
@@ -236,6 +236,9 @@ public class SqlData {
                 }
             } catch (Exception ignore) {
             }
+        }
+        if (!hasId) {
+            throw new IllegalArgumentException("The class must have an id field");
         }
         return data;
     }

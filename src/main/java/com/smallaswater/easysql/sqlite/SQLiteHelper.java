@@ -253,7 +253,6 @@ public class SQLiteHelper {
             e.printStackTrace();
         }
         return instance;
-
     }
 
     public <T> T get(String tableName, String key, String value, Class<T> clazz) {
@@ -267,14 +266,12 @@ public class SQLiteHelper {
             ResultSet resultSet = statement.executeQuery();
             T t = clazz.newInstance();
 
-            explainClass(resultSet, clazz, t);
+            instance = explainClass(resultSet, clazz, t);
             resultSet.close();
-
         } catch (SQLException | InstantiationException | IllegalAccessException e) {
             e.printStackTrace();
         }
         return instance;
-
     }
 
     public <T> LinkedList<T> getDataByString(String tableName, String selection, String[] key, Class<T> clazz) {
@@ -338,16 +335,12 @@ public class SQLiteHelper {
                     field.set(t, cursor.getFloat(name));
                 } else if (field.getType() == boolean.class) {
                     field.set(t, Boolean.valueOf(cursor.getString(name)));
-
                 } else if (field.getType() == long.class) {
                     field.set(t, cursor.getLong(name));
-
                 } else {
                     field.set(t, cursor.getString(name));
                 }
-
             }
-
         } catch (Exception e) {
             e.printStackTrace();
         }

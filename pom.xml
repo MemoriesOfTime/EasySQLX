@@ -146,6 +146,7 @@
 
     <build>
         <finalName>A_${project.artifactId}_v${project.version}</finalName>
+        <defaultGoal>clean package</defaultGoal>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

@@ -180,10 +180,10 @@ public class SqlData {
         return getDefaultToString(getObjects(), true);
     }
 
-    private String getDefaultToString(List<?> objects, boolean key) {
+    private String getDefaultToString(List<?> objects, boolean isValue) {
         StringBuilder builder = new StringBuilder();
         for (Object s : objects) {
-            if (key) {
+            if (isValue) {
                 builder.append("'").append(s).append("'").append(",");
             } else {
                 builder.append(s).append(",");

@@ -27,7 +27,7 @@ public class EasySQLX extends PluginBase {
 
     @Override
     public void onEnable() {
-        this.getLogger().info("已加载 EasySQL 插件 v" + this.getDescription().getVersion());
+        this.getLogger().info("已加载 EasySQLX 插件 v" + this.getDescription().getVersion());
     }
 
     @Override

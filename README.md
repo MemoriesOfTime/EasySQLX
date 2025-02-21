@@ -1,64 +1,99 @@
-<a href="https://github.com/SmallasWater/EasyMySQL/releases/latest" alt="Latest release">
-    <img src="https://img.shields.io/github/v/release/SmallasWater/EasyMySQL?include_prereleases" alt="Latest release">
-</a>
+![easysql_logo](./img/mysql.png)
 
-# EasySQL
+<p align="center">
+    <a href="https://github.com/SmallasWater/EasyMySQL/releases/latest" alt="Latest release">
+        <img src="https://img.shields.io/github/v/release/SmallasWater/EasyMySQL?include_prereleases" alt="Latest release">
+    </a>
+</p>
 
-> 使用本插件可以更方便的使用MySQL数据库
-> 使用本插件需要先了解一定的MySQL 至少要知道 **字段**，**表名** 的意思
+**EasySQL** 是一个用于简化 MySQL 数据库操作的插件。使用本插件前，建议先了解 MySQL 的基本概念，尤其是**字段**和**表名**的含义。
 
-> * 使用方法:
-    >   - 实例化 **SqlEnable**, **SqlManager** 或者 **UseTableSqlManager** 任意一个均可连接数据库
-    >   ~~~
->    
->   /**
->    * 连接数据表
->    */
->   SqlManager manager = new SqlManager(Plugin, UserData);
->     
->   ~~~
-~~~~
- * 用法简介
-    * SqlManager 类: 使用本插件需实例化本类连接数据库
-      
-      参数:
-       - plugin: 插件的 pluginBase 类即可
-       - data: 数据库账号密码等数据 具体参考 **UserData** 构造方法
+## MySQL 部分
 
-      方法:
-       - isEnable(): 返回数据库是否连接成功
-       - disable(): 关闭数据库的连接 一般在插件onDisable 内使用
-       - getConnection(): 获取**Connection**
-       - executeSql(String sql, ChunkSqlType... value): 执行sql语句
-       - executeFunction(MySqlFunctions functions): 执行MySQL函数
-       - executeFunction(String functions): 执行MySQL函数
-       - isExistTable(String tableName): 是否存在表
-       - createTable(String tableName): 创建一个只包含自增ID的表
-       - createTable(String tableName, TableType... tableTypes): 根据参数创建表
-       - deleteTable(String tableName): 删除表
-       - isExistColumn(String table, String column): 是否存在字段(列)  
-       - createColumn(String tableName, TableType tableType): 创建字段(列)
-       - deleteColumn(String tableName, String args): 删除字段(列)
-       - isExistsData(String tableName, String column, String data): 是否存在数据
-       - setData(String tableName, SqlData data, SqlData where): 修改数据
-       - insertData(String tableName, SqlData data): 添加数据
-       - insertData(String tableName, LinkedList<SqlData> datas): 添加多条数据
-       - deleteData(String tableName, SqlData data): 删除数据
-       - getDataSize(String sql, String tableName, ChunkSqlType... sqlType): 获取数据条数
-       - getData(String tableName, SelectType selectType): 获取数据
-       - getData(String sql, ChunkSqlType... types): 获取数据
-~~~~
-    * SqlData: 为查询语句获取的返回值 或者为向 MySQL写入数据用到的参数
-    
-      参数:
-       - column: 字段名
-       - object: 读取到的数值
-    
-      方法:
-       - put(String column,Object object): 写入数据 column 为字段名 object 为要写入的数据
-       - get(String column,T defaultValue): 根据字段名获取 任意类型数据 T 为返回值为null的情况下的类型
-       - getColumns(): 获取返回的所有字段名称
-       - getColumn(int index): 根据索引获取对应的字段名
+### 核心类与方法
+
+#### `SqlManager` 类
+
+`SqlManager` 是本插件的核心类，用于管理数据库连接和执行操作。
+
+**构造方法参数：**
+
+- `plugin`: 插件的 `pluginBase` 类实例。
+- `data`: 包含数据库账号、密码等信息的 `UserData` 对象。
+
+**常用方法：**
+
+- `isEnable()`: 返回数据库是否连接成功。
+- `disable()`: 关闭数据库连接，通常用于插件的 `onDisable` 方法中。
+- `getConnection()`: 获取 `Connection` 对象。
+- `executeSql(String sql, ChunkSqlType... value)`: 执行 SQL 语句。
+- `executeFunction(MySqlFunctions functions)`: 执行 MySQL 函数。
+- `executeFunction(String functions)`: 执行 MySQL 函数。
+- `isExistTable(String tableName)`: 检查表是否存在。
+- `createTable(String tableName)`: 创建一个仅包含自增 ID 的表。
+- `createTable(String tableName, TableType... tableTypes)`: 根据指定参数创建表。
+- `deleteTable(String tableName)`: 删除指定表。
+- `isExistColumn(String table, String column)`: 检查字段（列）是否存在。
+- `createColumn(String tableName, TableType tableType)`: 创建字段（列）。
+- `deleteColumn(String tableName, String args)`: 删除字段（列）。
+- `isExistsData(String tableName, String column, String data)`: 检查是否存在指定数据。
+- `setData(String tableName, SqlData data, SqlData where)`: 修改数据。
+- `insertData(String tableName, SqlData data)`: 插入单条数据。
+- `insertData(String tableName, LinkedList<SqlData> datas)`: 插入多条数据。
+- `deleteData(String tableName, SqlData data)`: 删除数据。
+- `getDataSize(String sql, String tableName, ChunkSqlType... sqlType)`: 获取数据条数。
+- `getData(String tableName, SelectType selectType)`: 获取数据。
+- `getData(String sql, ChunkSqlType... types)`: 获取数据。
+
+#### `SqlData` 类
+
+`SqlData` 用于存储查询结果或作为写入数据的参数。
+
+**参数：**
+
+- `column`: 字段名。
+- `object`: 读取到的数值。
+
+**常用方法：**
+
+- `put(String column, Object object)`: 写入数据，`column` 为字段名，`object` 为要写入的数据。
+- `get(String column, T defaultValue)`: 根据字段名获取数据，`T` 为返回值为 `null` 时的默认类型。
+- `getColumns()`: 获取所有字段名称。
+- `getColumn(int index)`: 根据索引获取对应的字段名。
+
+### 使用方法
+
+#### 1. 连接数据库
+
+首先，实例化 `SqlManager` 类并连接数据库：
+
+```java
+SqlManager manager = new SqlManager(plugin, userData);
+```
+
+#### 2. 执行 SQL 操作
+
+使用 `SqlManager` 提供的方法执行 SQL 操作，例如创建表、插入数据、查询数据等。
+
+```java
+// 创建表
+manager.createTable("example_table",new TableType("id", "INT AUTO_INCREMENT PRIMARY KEY"));
+
+// 插入数据
+SqlData data = new SqlData();
+data.
+
+put("name","John Doe");
+data.
+
+put("age",30);
+manager.
+
+insertData("example_table",data);
+
+// 查询数据
+SqlData result = manager.getData("example_table", SelectType.ALL);
+```
 
 ## ORM 部分
 
@@ -98,7 +133,8 @@
 > }
 > ```
 >
-> 更多的注解请看: https://github.com/iGxnon/EasyMySQL/tree/feat-orm/src/main/java/com/smallaswater/easysql/orm/annotations/entity
+>
+更多的注解请看: https://github.com/iGxnon/EasyMySQL/tree/feat-orm/src/main/java/com/smallaswater/easysql/orm/annotations/entity
 
 > 然后创建一个 接口(interface) 去继承我们的 **com.smallaswater.easysqlx.orm.api.IDAO**
 >
@@ -146,7 +182,8 @@
 >
 > 为什么只需要写一个接口？因为 orm 帮你把接口实现了！
 >
-> 更多注解请看: https://github.com/iGxnon/EasyMySQL/tree/feat-orm/src/main/java/com/smallaswater/easysql/orm/annotations/dao
+>
+更多注解请看: https://github.com/iGxnon/EasyMySQL/tree/feat-orm/src/main/java/com/smallaswater/easysql/orm/annotations/dao
 
 > 最后，就像这样就能使用了!
 >

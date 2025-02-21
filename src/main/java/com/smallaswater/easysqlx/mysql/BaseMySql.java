@@ -426,8 +426,19 @@ public abstract class BaseMySql {
             chunkSqlTypes.add(new ChunkSqlType(i, sqlData.getValue().toString()));
             i++;
         }
+        if (data.getData().isEmpty()) {
+            return this.getAllData(tableName, column);
+        }
         String command = "SELECT " + column + " FROM " + conversionTableName(tableName) + " WHERE " + sqlCommand;
         return this.getData(command, chunkSqlTypes.toArray(new ChunkSqlType[0]));
+    }
+
+    public SqlDataList<SqlData> getAllData(@NotNull String tableName, String column) {
+        if (column == null || column.trim().isEmpty()) {
+            column = "*";
+        }
+        String command = "SELECT " + column + " FROM " + conversionTableName(tableName);
+        return this.getData(command);
     }
 
     /**
@@ -442,8 +453,9 @@ public abstract class BaseMySql {
             tableName = tableName.substring(1, tableName.length() - 1);
         }
         return "`" + tableName.trim().replaceAll("\\\\", "\\\\\\\\")
-                .replace("_", "\\_").replace("'", "\\'")
-                .replace("%", "\\%").replace("*", "\\*") + "`";
+                .replace("'", "\\'")
+                .replace("%", "\\%")
+                .replace("*", "\\*") + "`";
     }
 
 

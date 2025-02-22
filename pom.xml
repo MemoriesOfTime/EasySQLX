@@ -9,7 +9,7 @@
     <version>4.0.0-SNAPSHOT</version>
 
     <name>EasySQLX</name>
-    <description>EasySQLX -- MySQL tool for Nukkit</description>
+    <description>EasySQLX -- SQL tool for Nukkit</description>
     <url>https://github.com/MemoriesOfTime/EasySQLX</url>
 
     <licenses>
@@ -78,6 +78,11 @@
             <id>repo-lanink-cn</id>
             <url>https://repo.lanink.cn/repository/maven-public/</url>
         </repository>
+        <repository>
+            <id>maven_central</id>
+            <name>Maven Central</name>
+            <url>https://repo.maven.apache.org/maven2/</url>
+        </repository>
     </repositories>
 
     <distributionManagement>
@@ -109,13 +114,13 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.18.32</version>
+            <version>1.18.34</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
-            <version>8.0.32</version>
+            <version>8.0.33</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
@@ -128,6 +133,18 @@
             <groupId>com.zaxxer</groupId>
             <artifactId>HikariCP</artifactId>
             <version>4.0.3</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.j256.ormlite</groupId>
+            <artifactId>ormlite-core</artifactId>
+            <version>6.1</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.j256.ormlite</groupId>
+            <artifactId>ormlite-jdbc</artifactId>
+            <version>6.1</version>
             <scope>compile</scope>
         </dependency>
         <dependency>

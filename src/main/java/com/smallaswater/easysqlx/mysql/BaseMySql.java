@@ -44,7 +44,7 @@ public abstract class BaseMySql {
         this.data = data;
         if (connectionParameters == null || connectionParameters.trim().isEmpty()) {
             this.connectionParameters = "&autoReconnect=true&failOverReadOnly=false&serverTimezone=GMT&characterEncoding=utf8&useSSL=false";
-        }else {
+        } else {
             this.connectionParameters = connectionParameters;
         }
     }
@@ -73,7 +73,6 @@ public abstract class BaseMySql {
      * @throws MySqlLoginException 连接错误
      */
     protected boolean connect() throws MySqlLoginException {
-        Connection connection = null;
         try {
             this.pool = EasySQLX.getLoginPool(data);
             this.pool.setManager(this);
@@ -83,6 +82,7 @@ public abstract class BaseMySql {
             config.setJdbcUrl("jdbc:mysql://" + this.data.getHost() + ':' + this.data.getPort() + '/' + this.data.getDatabase() + "?" + this.connectionParameters);
             config.setUsername(this.data.getUser());
             config.setPassword(this.data.getPassWorld());
+            config.setLeakDetectionThreshold(2000);
             this.pool.dataSource = new HikariDataSource(config);
             /*this.pool.dataSource.setInitialSize(3);
             this.pool.dataSource.setMinIdle(1);
@@ -95,13 +95,14 @@ public abstract class BaseMySql {
             this.pool.dataSource.addFilters("wall");
 */
             //TODO 修复链接判断
-            connection = this.getConnection();
-            if (connection != null && !connection.isClosed()) {
-                this.plugin.getLogger().info("已连接数据库");
-                PluginManager.connect(plugin, this);
-                return true;
-            } else {
-                plugin.getLogger().info("无法连接数据库");
+            try (Connection connection = this.getConnection()) {
+                if (connection != null && !connection.isClosed()) {
+                    this.plugin.getLogger().info("已连接数据库");
+                    PluginManager.connect(plugin, this);
+                    return true;
+                } else {
+                    plugin.getLogger().info("无法连接数据库");
+                }
             }
         } catch (Exception e) {
             plugin.getLogger().error("连接数据库出现异常...", e);
@@ -132,7 +133,7 @@ public abstract class BaseMySql {
     /**
      * 执行sql语句
      *
-     * @param sql sql语句
+     * @param sql   sql语句
      * @param value 参数
      * @return 是否执行成功
      */
@@ -167,9 +168,10 @@ public abstract class BaseMySql {
      * @return 是否存在
      */
     public boolean isExistTable(@NotNull String tableName) {
-        try {
-            ResultSet resultSet = this.getConnection().getMetaData().getTables(null, null, conversionTableName(tableName), null);
-            return resultSet.next();
+        try (Connection connection = this.getConnection()) {
+            try (ResultSet resultSet = connection.getMetaData().getTables(null, null, conversionTableName(tableName), null)) {
+                return resultSet.next(); // 如果返回 true，表示表存在
+            }
         } catch (SQLException e) {
             return false;
         }
@@ -188,7 +190,7 @@ public abstract class BaseMySql {
     /**
      * 创建表单
      *
-     * @param tableName 表名称
+     * @param tableName  表名称
      * @param tableTypes 参数
      * @return 是否创建成功
      */
@@ -218,13 +220,13 @@ public abstract class BaseMySql {
     /**
      * 是否存在字段
      *
-     * @param tableName  表名
-     * @param column 字段名
+     * @param tableName 表名
+     * @param column    字段名
      * @return 是否存在
      */
     public boolean isExistColumn(@NotNull String tableName, @NotNull String column) {
-        try {
-            ResultSet resultSet = this.getConnection().getMetaData().getColumns(null, null, conversionTableName(tableName), column);
+        try(Connection connection = this.getConnection()) {
+            ResultSet resultSet = connection.getMetaData().getColumns(null, null, conversionTableName(tableName), column);
             return resultSet.next();
         } catch (SQLException e) {
             return false;
@@ -234,7 +236,7 @@ public abstract class BaseMySql {
     /**
      * 给表增加字段
      *
-     * @param tableName  表单名
+     * @param tableName 表单名
      * @param tableType 字段参数
      * @return 是否成功
      */
@@ -246,7 +248,7 @@ public abstract class BaseMySql {
     /**
      * 给表删除字段
      *
-     * @param args 字段名
+     * @param args      字段名
      * @param tableName 表单名称
      * @return 删除一个字段
      */
@@ -258,8 +260,8 @@ public abstract class BaseMySql {
      * 是否有数据
      *
      * @param tableName 表名称
-     * @param column 条件:字段
-     * @param data 条件:值
+     * @param column    条件:字段
+     * @param data      条件:值
      * @return 是否存在数据
      */
     public boolean isExistsData(@NotNull String tableName, @NotNull String column, @NotNull String data) {
@@ -270,8 +272,8 @@ public abstract class BaseMySql {
      * 修改数据
      *
      * @param tableName 表单名称
-     * @param data  数据
-     * @param where 参数判断
+     * @param data      数据
+     * @param where     参数判断
      * @return 是否修改成功
      */
     public boolean setData(@NotNull String tableName, @NotNull SqlData data, @NotNull SqlData where) {
@@ -282,7 +284,7 @@ public abstract class BaseMySql {
      * 添加数据
      *
      * @param tableName 表单名称
-     * @param data 数据
+     * @param data      数据
      * @return 是否添加成功
      */
     public boolean insertData(@NotNull String tableName, @NotNull SqlData data) {
@@ -304,70 +306,46 @@ public abstract class BaseMySql {
      * 删除数据
      *
      * @param tableName 表单名称
-     * @param data 数据
+     * @param data      数据
      * @return 是否删除成功
      */
     public boolean deleteData(@NotNull String tableName, @NotNull SqlData data) {
         return SqlDataManager.deleteData(this.pool, conversionTableName(tableName), data);
     }
 
-    /**
-     * 获取数据条数
-     *
-     * @param sql 条件，例如id=?
-     * @param tableName 表单名称
-     * @param sqlType 参数
-     */
     public int getDataSize(@NotNull String sql, @NotNull String tableName, ChunkSqlType... sqlType) {
-        int i = 0;
-        Connection connection = this.getConnection();
-        PreparedStatement preparedStatement = null;
-        ResultSet resultSet = null;
-        try {
-            preparedStatement = connection.prepareStatement("SELECT COUNT(*) FROM " + conversionTableName(tableName) + " " + sql);
-            for(ChunkSqlType type: sqlType) {
-                preparedStatement.setString(type.getI(),type.getValue());
+        // 构建完整的 SQL 查询
+        String query = "SELECT COUNT(*) FROM " + conversionTableName(tableName) + " " + sql;
+
+        // 使用 try-with-resources 自动管理资源
+        try (Connection connection = this.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+
+            // 设置 SQL 参数
+            for (ChunkSqlType type : sqlType) {
+                preparedStatement.setString(type.getI(), type.getValue());
             }
-            resultSet = preparedStatement.executeQuery();
-            if (resultSet != null) {
+
+            // 执行查询并获取结果
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 if (resultSet.next()) {
-                    i = resultSet.getInt(1);
+                    return resultSet.getInt(1); // 返回计数值
                 }
             }
         } catch (Exception e) {
             e.printStackTrace();
-        } finally {
-            if (connection != null) {
-                try {
-                    connection.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (preparedStatement != null) {
-                try {
-                    preparedStatement.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (resultSet != null) {
-                try {
-                    resultSet.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
         }
-        return i;
+
+        // 如果没有符合条件的记录，返回 0
+        return 0;
     }
 
     /**
      * 获取没有重复的数据
      *
      * @param tableName 表名称
-     * @param column 要查询的字段
-     * @param data 查询条件内容
+     * @param column    要查询的字段
+     * @param data      查询条件内容
      * @return 数据
      */
     public SqlDataList<SqlData> getDisTinctData(@NotNull String tableName, String column, @NotNull SqlData data) {
@@ -381,7 +359,7 @@ public abstract class BaseMySql {
     /**
      * 获取数据
      *
-     * @param tableName 表名称
+     * @param tableName  表名称
      * @param selectType 查询条件
      * @return 数据
      */
@@ -395,7 +373,7 @@ public abstract class BaseMySql {
     /**
      * 获取数据
      *
-     * @param sql 执行查询SQL指令
+     * @param sql   执行查询SQL指令
      * @param types 参数
      * @return 数据
      */
@@ -407,8 +385,8 @@ public abstract class BaseMySql {
      * 获取数据
      *
      * @param tableName 表名称
-     * @param column 要查询的字段
-     * @param data 查询条件内容
+     * @param column    要查询的字段
+     * @param data      查询条件内容
      * @return 数据
      */
     public SqlDataList<SqlData> getData(@NotNull String tableName, String column, @NotNull SqlData data) {
@@ -418,7 +396,7 @@ public abstract class BaseMySql {
         ArrayList<ChunkSqlType> chunkSqlTypes = new ArrayList<>();
         StringBuilder sqlCommand = new StringBuilder();
         int i = 1;
-        for(Map.Entry<String, Object> sqlData: data.getData().entrySet()) {
+        for (Map.Entry<String, Object> sqlData : data.getData().entrySet()) {
             if (i > 1) {
                 sqlCommand.append(" AND ");
             }
@@ -426,8 +404,26 @@ public abstract class BaseMySql {
             chunkSqlTypes.add(new ChunkSqlType(i, sqlData.getValue().toString()));
             i++;
         }
+        if (data.getData().isEmpty()) {
+            return this.getAllData(tableName, column);
+        }
         String command = "SELECT " + column + " FROM " + conversionTableName(tableName) + " WHERE " + sqlCommand;
         return this.getData(command, chunkSqlTypes.toArray(new ChunkSqlType[0]));
+    }
+
+    /**
+     * 从指定表中获取所有或指定列的数据
+     *
+     * @param tableName 目标表名（非空）
+     * @param column    需要查询的列名，当为null/空字符串时会查询所有列（自动转换为*）
+     * @return 包含查询结果的SqlDataList对象
+     */
+    public SqlDataList<SqlData> getAllData(@NotNull String tableName, String column) {
+        if (column == null || column.trim().isEmpty()) {
+            column = "*";
+        }
+        String command = "SELECT " + column + " FROM " + conversionTableName(tableName);
+        return this.getData(command);
     }
 
     /**
@@ -442,8 +438,9 @@ public abstract class BaseMySql {
             tableName = tableName.substring(1, tableName.length() - 1);
         }
         return "`" + tableName.trim().replaceAll("\\\\", "\\\\\\\\")
-                .replace("_", "\\_").replace("'", "\\'")
-                .replace("%", "\\%").replace("*", "\\*") + "`";
+                .replace("'", "\\'")
+                .replace("%", "\\%")
+                .replace("*", "\\*") + "`";
     }
 
 

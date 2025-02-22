@@ -225,16 +225,14 @@ public class SQLiteHelper {
 
     public <T> SQLiteHelper set(String tableName, SqlData key, T values) {
         SqlData sqlData = SqlData.classToSqlData(values);
-        try {
-            String sql = "update " + tableName + " set " + sqlData.toUpdateValue() + " where " + getUpDataWhere(key);
-            try (PreparedStatement statement = this.getConnection().prepareStatement(sql)) {
-                int i = 1;
-                for (Object type : key.getObjects()) {
-                    statement.setString(i, type.toString());
-                    i++;
-                }
-                statement.execute();
+        String sql = "update " + tableName + " set " + sqlData.toUpdateValue() + " where " + getUpDataWhere(key);
+        try (PreparedStatement statement = this.getConnection().prepareStatement(sql)) {
+            int i = 1;
+            for (Object type : key.getObjects()) {
+                statement.setString(i, type.toString());
+                i++;
             }
+            statement.execute();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -246,8 +244,8 @@ public class SQLiteHelper {
      * 判断是否存在数据
      *
      * @param tableName 表名
-     * @param key     查询条件 键
-     * @param value   查询条件 值
+     * @param key       查询条件 键
+     * @param value     查询条件 值
      * @return 是否存在数据
      */
     public boolean hasData(String tableName, String key, String value) {

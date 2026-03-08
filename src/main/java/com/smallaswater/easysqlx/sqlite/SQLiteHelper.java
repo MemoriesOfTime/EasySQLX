@@ -290,7 +290,9 @@ public class SQLiteHelper {
             statement.setInt(1, id);
             ResultSet resultSet = statement.executeQuery();
 
-            instance = explainClass(resultSet, clazz, clazz.newInstance());
+            if (resultSet.next()) {
+                instance = explainClass(resultSet, clazz, clazz.newInstance());
+            }
             resultSet.close();
         } catch (SQLException | InstantiationException | IllegalAccessException e) {
             e.printStackTrace();
@@ -311,9 +313,10 @@ public class SQLiteHelper {
             statement.setString(1, value);
 
             ResultSet resultSet = statement.executeQuery();
-            T t = clazz.newInstance();
-
-            instance = explainClass(resultSet, clazz, t);
+            if (resultSet.next()) {
+                T t = clazz.newInstance();
+                instance = explainClass(resultSet, clazz, t);
+            }
             resultSet.close();
         } catch (SQLException | InstantiationException | IllegalAccessException e) {
             e.printStackTrace();

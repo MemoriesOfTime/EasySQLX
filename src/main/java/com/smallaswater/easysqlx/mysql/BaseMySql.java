@@ -43,7 +43,7 @@ public abstract class BaseMySql {
         this.plugin = plugin;
         this.data = data;
         if (connectionParameters == null || connectionParameters.trim().isEmpty()) {
-            this.connectionParameters = "&autoReconnect=true&failOverReadOnly=false&serverTimezone=GMT&characterEncoding=utf8&useSSL=false";
+            this.connectionParameters = "failOverReadOnly=false&serverTimezone=GMT&characterEncoding=utf8&useSSL=false";
         } else {
             this.connectionParameters = connectionParameters;
         }
@@ -76,6 +76,14 @@ public abstract class BaseMySql {
         try {
             this.pool = EasySQLX.getLoginPool(data);
             this.pool.setManager(this);
+
+            // 如果连接池已存在且有效，直接复用
+            if (this.pool.isActive()) {
+                this.plugin.getLogger().info("已复用数据库连接池");
+                PluginManager.connect(plugin, this);
+                return true;
+            }
+
             Class.forName("com.mysql.cj.jdbc.Driver");
             HikariConfig config = new HikariConfig();
             config.setDriverClassName("com.mysql.cj.jdbc.Driver");
@@ -83,18 +91,14 @@ public abstract class BaseMySql {
             config.setUsername(this.data.getUser());
             config.setPassword(this.data.getPassWorld());
             config.setLeakDetectionThreshold(2000);
+            // 保活配置
+            config.setConnectionTestQuery("SELECT 1");
+            config.setKeepaliveTime(60000);
+            config.setMaxLifetime(1800000);
+            config.setMinimumIdle(1);
+            config.setMaximumPoolSize(10);
             this.pool.dataSource = new HikariDataSource(config);
-            /*this.pool.dataSource.setInitialSize(3);
-            this.pool.dataSource.setMinIdle(1);
-            this.pool.dataSource.setMaxActive(30);
-            this.pool.dataSource.setValidationQuery("SELECT 1");
-            this.pool.dataSource.setTimeBetweenEvictionRunsMillis(180000);
-            this.pool.dataSource.setBreakAfterAcquireFailure(true);
-            this.pool.dataSource.setTimeBetweenConnectErrorMillis(180000);
-            this.pool.dataSource.setConnectionErrorRetryAttempts(3);
-            this.pool.dataSource.addFilters("wall");
-*/
-            //TODO 修复链接判断
+
             try (Connection connection = this.getConnection()) {
                 if (connection != null && !connection.isClosed()) {
                     this.plugin.getLogger().info("已连接数据库");
@@ -125,7 +129,7 @@ public abstract class BaseMySql {
      */
     public void shutdown() {
         if (this.pool != null) {
-            this.pool.dataSource.close();
+            this.pool.close();
             this.plugin.getLogger().info("已断开数据库连接");
         }
     }

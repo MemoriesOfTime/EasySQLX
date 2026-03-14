@@ -34,6 +34,22 @@ public class LoginPool {
         return manager;
     }
 
+    /**
+     * 判断连接池是否处于活跃状态
+     */
+    public boolean isActive() {
+        return dataSource != null && !dataSource.isClosed();
+    }
+
+    /**
+     * 安全关闭连接池
+     */
+    public void close() {
+        if (dataSource != null && !dataSource.isClosed()) {
+            dataSource.close();
+        }
+    }
+
     @Override
     public boolean equals(Object pool) {
         if (pool instanceof LoginPool) {

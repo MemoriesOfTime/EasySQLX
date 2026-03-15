@@ -172,9 +172,12 @@ public abstract class BaseMySql {
      * @return 是否存在
      */
     public boolean isExistTable(@NotNull String tableName) {
-        try (Connection connection = this.getConnection()) {
-            try (ResultSet resultSet = connection.getMetaData().getTables(null, null, conversionTableName(tableName), null)) {
-                return resultSet.next(); // 如果返回 true，表示表存在
+        String sql = "SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?";
+        try (Connection connection = this.getConnection();
+             PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, rawTableName(tableName));
+            try (ResultSet resultSet = ps.executeQuery()) {
+                return resultSet.next();
             }
         } catch (SQLException e) {
             return false;
@@ -188,7 +191,7 @@ public abstract class BaseMySql {
      * @return 是否创建成功
      */
     public boolean createTable(@NotNull String tableName) {
-        return this.createTable(conversionTableName(tableName), new TableType("id", DataType.getID()));
+        return this.createTable(tableName, new TableType("id", DataType.getID()));
     }
 
     /**
@@ -229,9 +232,14 @@ public abstract class BaseMySql {
      * @return 是否存在
      */
     public boolean isExistColumn(@NotNull String tableName, @NotNull String column) {
-        try(Connection connection = this.getConnection()) {
-            ResultSet resultSet = connection.getMetaData().getColumns(null, null, conversionTableName(tableName), column);
-            return resultSet.next();
+        String sql = "SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?";
+        try (Connection connection = this.getConnection();
+             PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, rawTableName(tableName));
+            ps.setString(2, column);
+            try (ResultSet resultSet = ps.executeQuery()) {
+                return resultSet.next();
+            }
         } catch (SQLException e) {
             return false;
         }
@@ -428,6 +436,20 @@ public abstract class BaseMySql {
         }
         String command = "SELECT " + column + " FROM " + conversionTableName(tableName);
         return this.getData(command);
+    }
+
+    /**
+     * 去除表名外围的反引号
+     *
+     * @param name 表名（可能带反引号）
+     * @return 原始表名
+     */
+    @NotNull
+    private static String rawTableName(@NotNull String name) {
+        if (name.startsWith("`") && name.endsWith("`")) {
+            name = name.substring(1, name.length() - 1);
+        }
+        return name.trim();
     }
 
     /**

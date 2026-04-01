@@ -43,7 +43,7 @@ public abstract class BaseMySql {
         this.plugin = plugin;
         this.data = data;
         if (connectionParameters == null || connectionParameters.trim().isEmpty()) {
-            this.connectionParameters = "failOverReadOnly=false&serverTimezone=GMT&characterEncoding=utf8&useSSL=false";
+            this.connectionParameters = "failOverReadOnly=false&serverTimezone=GMT&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true";
         } else {
             this.connectionParameters = connectionParameters;
         }

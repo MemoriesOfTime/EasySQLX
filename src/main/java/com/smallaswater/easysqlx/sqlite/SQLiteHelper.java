@@ -7,9 +7,10 @@ import com.smallaswater.easysqlx.common.data.SqlData;
 
 import java.lang.reflect.Field;
 import java.sql.*;
-import java.text.MessageFormat;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -23,18 +24,34 @@ public class SQLiteHelper {
 
     private final String dbFilePath;
 
+    private static final int CACHE_MAXIMUM_SIZE = 128;
+    private static final int BATCH_SIZE = 500;
+
+    private static final ClassValue<Map<String, Field>> FIELD_CACHE = new ClassValue<Map<String, Field>>() {
+        @Override
+        protected Map<String, Field> computeValue(Class<?> type) {
+            Map<String, Field> fields = new HashMap<>();
+            for (Field field : type.getFields()) {
+                fields.put(field.getName(), field);
+                fields.put(field.getName().toLowerCase(), field);
+            }
+            return fields;
+        }
+    };
+
     /**
      * PreparedStatement 缓存
      * 缓存可能常用的语句预编译
      */
     private final Cache<String, PreparedStatement> preparedStatementCache = CacheBuilder.newBuilder()
+            .maximumSize(CACHE_MAXIMUM_SIZE)
             .expireAfterAccess(10, java.util.concurrent.TimeUnit.MINUTES)
             .removalListener(notification -> {
                 if (notification.getValue() instanceof PreparedStatement) {
                     try {
                         ((PreparedStatement) notification.getValue()).close();
                     } catch (SQLException e) {
-                        EasySQLX.getInstance().getLogger().error("关闭 PreparedStatement 时异常 ", e);
+                        logSqlException("关闭 PreparedStatement 时异常 ", e);
                     }
                 }
             })
@@ -67,31 +84,26 @@ public class SQLiteHelper {
     }
 
 
-    public boolean exists(String table) {
+    public synchronized boolean exists(String table) {
         try {
-            String query = "select * from " + table;
-            PreparedStatement statement = this.preparedStatementCache.getIfPresent(query);
-            if (statement == null) {
-                statement = this.connection.prepareStatement(query);
-                this.preparedStatementCache.put(query, statement);
+            String query = "SELECT 1 FROM sqlite_master WHERE type='table' AND name COLLATE NOCASE = ? LIMIT 1";
+            PreparedStatement statement = getPreparedStatement(query);
+            statement.setObject(1, table);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next();
             }
-            ResultSet resultSet = statement.executeQuery();
-
-            return true;
         } catch (Exception e) {
             return false;
         }
 
     }
 
-    public void addTable(String tableName, DBTable tables) {
-        if (!exists(tableName)) {
-            String sql = "create table " + tableName + "(" + tables.asSql() + ")";
-            try {
-                getStatement().execute(sql);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+    public synchronized void addTable(String tableName, DBTable tables) {
+        String sql = "create table if not exists " + tableName + "(" + tables.asSql() + ")";
+        try {
+            getStatement().execute(sql);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -102,7 +114,7 @@ public class SQLiteHelper {
     /**
      * 增加数据
      */
-    public <T> void add(String tableName, T values) {
+    public synchronized <T> void add(String tableName, T values) {
         try {
             SqlData sqlData = SqlData.classToSqlData(values);
             this.add(tableName, sqlData);
@@ -114,12 +126,71 @@ public class SQLiteHelper {
     /**
      * 增加数据
      */
-    public SQLiteHelper add(String tableName, SqlData values) {
+    public synchronized SQLiteHelper add(String tableName, SqlData values) {
         try {
-            String sql = "insert into " + tableName + "(" + values.getColumnToString() + ") values (" + values.getObjectToString() + ")";
-            this.getStatement().execute(sql);
+            List<String> columns = values.getColumns();
+            List<Object> objects = values.getObjects();
+            String sql = buildInsertSql(tableName, columns);
+            PreparedStatement statement = getPreparedStatement(sql);
+            bindObjects(statement, objects, 1);
+            statement.execute();
         } catch (Exception e) {
             throw new RuntimeException(e);
+        }
+        return this;
+    }
+
+    public synchronized SQLiteHelper add(String tableName, LinkedList<SqlData> values) {
+        if (values == null || values.isEmpty()) {
+            return this;
+        }
+        boolean originalAutoCommit = true;
+        PreparedStatement statement = null;
+        try {
+            Connection connection = getConnection();
+            originalAutoCommit = connection.getAutoCommit();
+            connection.setAutoCommit(false);
+
+            List<String> columns = values.getFirst().getColumns();
+            String sql = buildInsertSql(tableName, columns);
+            statement = getPreparedStatement(sql);
+            int batchCount = 0;
+            for (SqlData value : values) {
+                List<String> rowColumns = value.getColumns();
+                if (!columns.equals(rowColumns)) {
+                    throw new IllegalArgumentException("批量插入的数据列不一致");
+                }
+                bindObjects(statement, value.getObjects(), 1);
+                statement.addBatch();
+                batchCount++;
+                if (batchCount == BATCH_SIZE) {
+                    statement.executeBatch();
+                    statement.clearBatch();
+                    batchCount = 0;
+                }
+            }
+            if (batchCount > 0) {
+                statement.executeBatch();
+                statement.clearBatch();
+            }
+            connection.commit();
+        } catch (Exception e) {
+            try {
+                getConnection().rollback();
+            } catch (Exception ignore) {
+            }
+            throw new RuntimeException(e);
+        } finally {
+            if (statement != null) {
+                try {
+                    statement.clearBatch();
+                } catch (Exception ignore) {
+                }
+            }
+            try {
+                getConnection().setAutoCommit(originalAutoCommit);
+            } catch (Exception ignore) {
+            }
         }
         return this;
     }
@@ -127,7 +198,7 @@ public class SQLiteHelper {
     /**
      * 删除数据
      */
-    public SQLiteHelper remove(String tableName, int id) {
+    public synchronized SQLiteHelper remove(String tableName, int id) {
         try {
             String sql = "delete from " + tableName + " where id = " + id;
             this.getStatement().execute(sql);
@@ -136,15 +207,11 @@ public class SQLiteHelper {
         return this;
     }
 
-    public SQLiteHelper remove(String tableName, String key, String value) {
+    public synchronized SQLiteHelper remove(String tableName, String key, String value) {
         try {
             String sql = "delete from " + tableName + " where " + key + " = ?";
-            PreparedStatement statement = this.preparedStatementCache.getIfPresent(sql);
-            if (statement == null) {
-                statement = this.connection.prepareStatement(sql);
-                this.preparedStatementCache.put(sql, statement);
-            }
-            statement.setString(1, value);
+            PreparedStatement statement = getPreparedStatement(sql);
+            statement.setObject(1, value);
             statement.execute();
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -152,7 +219,7 @@ public class SQLiteHelper {
         return this;
     }
 
-    public SQLiteHelper removeAll(String tableName) {
+    public synchronized SQLiteHelper removeAll(String tableName) {
         try {
             String sql = "delete from " + tableName;
             this.getStatement().execute(sql);
@@ -162,7 +229,7 @@ public class SQLiteHelper {
         return this;
     }
 
-    public <T> SQLiteHelper set(String tableName, T values) {
+    public synchronized <T> SQLiteHelper set(String tableName, T values) {
         SqlData contentValues = SqlData.classToSqlDataAsId(values);
         if (contentValues.getInt("id") == -1) {
             throw new NullPointerException("无 id 信息");
@@ -170,7 +237,7 @@ public class SQLiteHelper {
         return set(tableName, contentValues.getInt("id"), contentValues);
     }
 
-    public <T> SQLiteHelper set(String tableName, String key, String value, T values) {
+    public synchronized <T> SQLiteHelper set(String tableName, String key, String value, T values) {
         SqlData sqlData = SqlData.classToSqlData(values);
         return set(tableName, key, value, sqlData);
     }
@@ -178,9 +245,17 @@ public class SQLiteHelper {
     /**
      * 更新数据
      */
-    public SQLiteHelper set(String tableName, int id, SqlData values) {
+    public synchronized SQLiteHelper set(String tableName, int id, SqlData values) {
         try {
-            this.getStatement().execute(MessageFormat.format("update {0} set {1} where id = {2}", tableName, values.toUpdateValue(), id));
+            List<Map.Entry<String, Object>> entries = getUpdateEntries(values);
+            if (entries.isEmpty()) {
+                return this;
+            }
+            String sql = "update " + tableName + " set " + getUpdateSetSql(entries) + " where id = ?";
+            PreparedStatement statement = getPreparedStatement(sql);
+            int index = bindEntries(statement, entries, 1);
+            statement.setObject(index, id);
+            statement.execute();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -190,30 +265,16 @@ public class SQLiteHelper {
     /**
      * 更新数据
      */
-    public SQLiteHelper set(String tableName, String key, String value, SqlData values) {
+    public synchronized SQLiteHelper set(String tableName, String key, String value, SqlData values) {
         try {
-            StringBuilder builder = new StringBuilder();
-            for (Map.Entry<String, Object> entry : values.getData().entrySet()) {
-                if ("id".equalsIgnoreCase(entry.getKey())) {
-                    continue;
-                }
-                builder.append(entry.getKey()).append(" = ?,");
+            List<Map.Entry<String, Object>> entries = getUpdateEntries(values);
+            if (entries.isEmpty()) {
+                return this;
             }
-            String str = builder.toString();
-            str = str.substring(0, str.length() - 1);
-
-            String sql = "update " + tableName + " set " + str + " where " + key + " = ?";
-            PreparedStatement statement = this.preparedStatementCache.getIfPresent(sql);
-            if (statement == null) {
-                statement = this.connection.prepareStatement(sql);
-                this.preparedStatementCache.put(sql, statement);
-            }
-
-            int index = 0;
-            for (Map.Entry<String, Object> entry : values.getData().entrySet()) {
-                statement.setString(++index, entry.getValue().toString());
-            }
-            statement.setString(++index, value);
+            String sql = "update " + tableName + " set " + getUpdateSetSql(entries) + " where " + key + " = ?";
+            PreparedStatement statement = getPreparedStatement(sql);
+            int index = bindEntries(statement, entries, 1);
+            statement.setObject(index, value);
 
             statement.execute();
         } catch (Exception e) {
@@ -223,15 +284,17 @@ public class SQLiteHelper {
 
     }
 
-    public <T> SQLiteHelper set(String tableName, SqlData key, T values) {
+    public synchronized <T> SQLiteHelper set(String tableName, SqlData key, T values) {
         SqlData sqlData = SqlData.classToSqlData(values);
-        String sql = "update " + tableName + " set " + sqlData.toUpdateValue() + " where " + getUpDataWhere(key);
-        try (PreparedStatement statement = this.getConnection().prepareStatement(sql)) {
-            int i = 1;
-            for (Object type : key.getObjects()) {
-                statement.setString(i, type.toString());
-                i++;
-            }
+        List<Map.Entry<String, Object>> entries = getUpdateEntries(sqlData);
+        if (entries.isEmpty()) {
+            return this;
+        }
+        String sql = "update " + tableName + " set " + getUpdateSetSql(entries) + " where " + getUpDataWhere(key);
+        try {
+            PreparedStatement statement = getPreparedStatement(sql);
+            int index = bindEntries(statement, entries, 1);
+            bindObjects(statement, key.getObjects(), index);
             statement.execute();
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -248,25 +311,17 @@ public class SQLiteHelper {
      * @param value     查询条件 值
      * @return 是否存在数据
      */
-    public boolean hasData(String tableName, String key, String value) {
+    public synchronized boolean hasData(String tableName, String key, String value) {
         try {
-            String query = "SELECT COUNT(*) FROM " + tableName + " WHERE " + key + " = ?";
-            PreparedStatement statement = this.preparedStatementCache.getIfPresent(query);
-            if (statement == null) {
-                statement = this.connection.prepareStatement(query);
-                this.preparedStatementCache.put(query, statement);
-            }
-            statement.setString(1, value);
-            ResultSet resultSet = statement.executeQuery();
-            if (resultSet.next()) {
-                int count = resultSet.getInt(1);
-                resultSet.close();
-                return count > 0;
+            String query = "SELECT 1 FROM " + tableName + " WHERE " + key + " = ? LIMIT 1";
+            PreparedStatement statement = getPreparedStatement(query);
+            statement.setObject(1, value);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next();
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
-        return false;
     }
 
     private String getUpDataWhere(SqlData data) {
@@ -278,75 +333,69 @@ public class SQLiteHelper {
         return str.substring(0, str.length() - 3);
     }
 
-    public <T> T get(String tableName, int id, Class<T> clazz) {
+    public synchronized <T> T get(String tableName, int id, Class<T> clazz) {
         T instance = null;
         try {
             String query = "SELECT * FROM " + tableName + " WHERE id = ?";
-            PreparedStatement statement = this.preparedStatementCache.getIfPresent(query);
-            if (statement == null) {
-                statement = this.connection.prepareStatement(query);
-                this.preparedStatementCache.put(query, statement);
+            PreparedStatement statement = getPreparedStatement(query);
+            statement.setObject(1, id);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                ResultSetMapper mapper = ResultSetMapper.of(resultSet, clazz);
+                if (resultSet.next()) {
+                    instance = explainClass(resultSet, clazz.newInstance(), mapper);
+                }
             }
-            statement.setInt(1, id);
-            ResultSet resultSet = statement.executeQuery();
-
-            if (resultSet.next()) {
-                instance = explainClass(resultSet, clazz, clazz.newInstance());
-            }
-            resultSet.close();
         } catch (SQLException | InstantiationException | IllegalAccessException e) {
             e.printStackTrace();
         }
         return instance;
     }
 
-    public <T> T get(String tableName, String key, String value, Class<T> clazz) {
+    public synchronized <T> T get(String tableName, String key, String value, Class<T> clazz) {
         T instance = null;
         try {
             // 准备 SQL 查询语句
             String query = "SELECT * FROM " + tableName + " WHERE " + key + " = ?";
-            PreparedStatement statement = this.preparedStatementCache.getIfPresent(query);
-            if (statement == null) {
-                statement = this.connection.prepareStatement(query);
-                this.preparedStatementCache.put(query, statement);
-            }
-            statement.setString(1, value);
+            PreparedStatement statement = getPreparedStatement(query);
+            statement.setObject(1, value);
 
-            ResultSet resultSet = statement.executeQuery();
-            if (resultSet.next()) {
-                T t = clazz.newInstance();
-                instance = explainClass(resultSet, clazz, t);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                ResultSetMapper mapper = ResultSetMapper.of(resultSet, clazz);
+                if (resultSet.next()) {
+                    T t = clazz.newInstance();
+                    instance = explainClass(resultSet, t, mapper);
+                }
             }
-            resultSet.close();
         } catch (SQLException | InstantiationException | IllegalAccessException e) {
             e.printStackTrace();
         }
         return instance;
     }
 
-    public <T> LinkedList<T> getDataByString(String tableName, String selection, String[] key, Class<T> clazz) {
+    public synchronized <T> LinkedList<T> getDataByString(String tableName, String selection, String[] key, Class<T> clazz) {
+        return getDataByString(tableName, selection, key, clazz, 0, 0);
+    }
+
+    public synchronized <T> LinkedList<T> getDataByString(String tableName, String selection, String[] key, Class<T> clazz, int start, int length) {
         LinkedList<T> datas = new LinkedList<>();
         try {
             // 准备 SQL 查询语句
-            String query = "SELECT * FROM " + tableName + " WHERE " + selection;
-            PreparedStatement statement = this.preparedStatementCache.getIfPresent(query);
-            if (statement == null) {
-                statement = this.connection.prepareStatement(query);
-                this.preparedStatementCache.put(query, statement);
-            }
+            String query = "SELECT * FROM " + tableName + " WHERE " + selection + buildLimitClause(start, length);
+            PreparedStatement statement = getPreparedStatement(query);
 
             // 设置查询条件
             for (int i = 0; i < key.length; i++) {
-                statement.setString(i + 1, key[i]);
+                statement.setObject(i + 1, key[i]);
             }
 
             // 执行查询
-            ResultSet resultSet = statement.executeQuery();
-            while (resultSet.next()) {
-                T t = clazz.newInstance();
-                datas.add(explainClass(resultSet, clazz, t));
+            try (ResultSet resultSet = statement.executeQuery()) {
+                ResultSetMapper mapper = ResultSetMapper.of(resultSet, clazz);
+                while (resultSet.next()) {
+                    T t = clazz.newInstance();
+                    datas.add(explainClass(resultSet, t, mapper));
+                }
             }
-            resultSet.close();
 
         } catch (SQLException | InstantiationException | IllegalAccessException e) {
             e.printStackTrace();
@@ -355,25 +404,25 @@ public class SQLiteHelper {
     }
 
 
-    public <T> LinkedList<T> getAll(String tableName, Class<T> clazz) {
+    public synchronized <T> LinkedList<T> getAll(String tableName, Class<T> clazz) {
+        return getAll(tableName, clazz, 0, 0);
+    }
+
+    public synchronized <T> LinkedList<T> getAll(String tableName, Class<T> clazz, int start, int length) {
         LinkedList<T> datas = new LinkedList<>();
         try {
             // 准备 SQL 查询语句
-            String query = "SELECT * FROM " + tableName;
-            PreparedStatement statement = this.preparedStatementCache.getIfPresent(query);
-            if (statement == null) {
-                statement = this.connection.prepareStatement(query);
-                this.preparedStatementCache.put(query, statement);
-            }
+            String query = "SELECT * FROM " + tableName + buildLimitClause(start, length);
+            PreparedStatement statement = getPreparedStatement(query);
 
             // 执行查询
-            ResultSet resultSet = statement.executeQuery();
-            while (resultSet.next()) {
-                T t = clazz.newInstance();
-                datas.add(explainClass(resultSet, clazz, t));
+            try (ResultSet resultSet = statement.executeQuery()) {
+                ResultSetMapper mapper = ResultSetMapper.of(resultSet, clazz);
+                while (resultSet.next()) {
+                    T t = clazz.newInstance();
+                    datas.add(explainClass(resultSet, t, mapper));
+                }
             }
-
-            resultSet.close();
 
         } catch (SQLException | InstantiationException | IllegalAccessException e) {
             e.printStackTrace();
@@ -381,12 +430,13 @@ public class SQLiteHelper {
         return datas;
     }
 
-    private <T> T explainClass(ResultSet cursor, Class<?> tc, T t) {
+    private <T> T explainClass(ResultSet cursor, T t, ResultSetMapper mapper) {
         try {
-            ResultSetMetaData rsmd = cursor.getMetaData();
-            for (int i = 0; i < rsmd.getColumnCount(); i++) {
-                String name = rsmd.getColumnName(i + 1);
-                Field field = tc.getField(name);
+            for (String name : mapper.columns) {
+                Field field = mapper.fields.get(name);
+                if (field == null) {
+                    continue;
+                }
                 if (field.getType() == int.class) {
                     field.set(t, cursor.getInt(name));
                 } else if (field.getType() == float.class || field.getType() == double.class) {
@@ -477,28 +527,155 @@ public class SQLiteHelper {
         return this.statement;
     }
 
-    public void destroyed() {
+    private PreparedStatement getPreparedStatement(String sql) throws SQLException {
+        PreparedStatement statement = this.preparedStatementCache.getIfPresent(sql);
+        if (statement == null) {
+            statement = this.connection.prepareStatement(sql);
+            this.preparedStatementCache.put(sql, statement);
+        }
+        statement.clearParameters();
+        statement.clearBatch();
+        return statement;
+    }
+
+    private String placeholders(int count) {
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < count; i++) {
+            if (i > 0) {
+                builder.append(",");
+            }
+            builder.append("?");
+        }
+        return builder.toString();
+    }
+
+    private String buildInsertSql(String tableName, List<String> columns) {
+        if (columns.isEmpty()) {
+            return "insert into " + tableName + " default values";
+        }
+        return "insert into " + tableName + "(" + String.join(",", columns) + ") values (" + placeholders(columns.size()) + ")";
+    }
+
+    private int bindObjects(PreparedStatement statement, List<?> values, int startIndex) throws SQLException {
+        int index = startIndex;
+        for (Object value : values) {
+            statement.setObject(index, value);
+            index++;
+        }
+        return index;
+    }
+
+    private List<Map.Entry<String, Object>> getUpdateEntries(SqlData values) {
+        List<Map.Entry<String, Object>> entries = new LinkedList<>();
+        for (Map.Entry<String, Object> entry : values.getData().entrySet()) {
+            if (!"id".equalsIgnoreCase(entry.getKey())) {
+                entries.add(entry);
+            }
+        }
+        return entries;
+    }
+
+    private String getUpdateSetSql(List<Map.Entry<String, Object>> entries) {
+        StringBuilder builder = new StringBuilder();
+        for (Map.Entry<String, Object> entry : entries) {
+            if (builder.length() > 0) {
+                builder.append(",");
+            }
+            builder.append(entry.getKey()).append(" = ?");
+        }
+        return builder.toString();
+    }
+
+    private int bindEntries(PreparedStatement statement, List<Map.Entry<String, Object>> entries, int startIndex) throws SQLException {
+        int index = startIndex;
+        for (Map.Entry<String, Object> entry : entries) {
+            statement.setObject(index, entry.getValue());
+            index++;
+        }
+        return index;
+    }
+
+    private String buildLimitClause(int start, int length) {
+        if (length <= 0) {
+            return "";
+        }
+        return " LIMIT " + Math.max(start, 0) + "," + length;
+    }
+
+    public synchronized void destroyed() {
         this.close();
     }
 
     /**
      * 数据库资源关闭和释放
      */
-    public void close() {
-        try {
-            if (null != connection) {
-                connection.close();
-                connection = null;
-            }
-
-            if (null != statement) {
+    public synchronized void close() {
+        SQLException exception = null;
+        if (null != statement) {
+            try {
                 statement.close();
+            } catch (SQLException e) {
+                exception = addCloseException(exception, e);
+            } finally {
                 statement = null;
             }
+        }
 
+        try {
             this.preparedStatementCache.invalidateAll();
-        } catch (SQLException e) {
-            EasySQLX.getInstance().getLogger().error("Sqlite数据库关闭时异常 ", e);
+            this.preparedStatementCache.cleanUp();
+        } finally {
+            if (null != connection) {
+                try {
+                    connection.close();
+                } catch (SQLException e) {
+                    exception = addCloseException(exception, e);
+                } finally {
+                    connection = null;
+                }
+            }
+        }
+
+        if (exception != null) {
+            logSqlException("Sqlite数据库关闭时异常 ", exception);
+        }
+    }
+
+    private static Map<String, Field> getFieldMap(Class<?> clazz) {
+        return FIELD_CACHE.get(clazz);
+    }
+
+    private static SQLException addCloseException(SQLException current, SQLException next) {
+        if (current == null) {
+            return next;
+        }
+        current.addSuppressed(next);
+        return current;
+    }
+
+    private static void logSqlException(String message, SQLException e) {
+        EasySQLX plugin = EasySQLX.getInstance();
+        if (plugin != null) {
+            plugin.getLogger().error(message, e);
+        }
+    }
+
+    private static final class ResultSetMapper {
+        private final String[] columns;
+        private final Map<String, Field> fields;
+
+        private ResultSetMapper(String[] columns, Map<String, Field> fields) {
+            this.columns = columns;
+            this.fields = fields;
+        }
+
+        private static ResultSetMapper of(ResultSet resultSet, Class<?> clazz) throws SQLException {
+            ResultSetMetaData metadata = resultSet.getMetaData();
+            String[] columns = new String[metadata.getColumnCount()];
+            for (int i = 0; i < columns.length; i++) {
+                columns[i] = metadata.getColumnName(i + 1);
+            }
+            return new ResultSetMapper(columns, getFieldMap(clazz));
         }
     }
 

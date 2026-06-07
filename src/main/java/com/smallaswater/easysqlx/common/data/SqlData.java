@@ -12,6 +12,13 @@ import java.util.Map;
  */
 public class SqlData {
 
+    private static final ClassValue<Field[]> FIELD_CACHE = new ClassValue<Field[]>() {
+        @Override
+        protected Field[] computeValue(Class<?> type) {
+            return type.getFields();
+        }
+    };
+
     private final LinkedHashMap<String, Object> data = new LinkedHashMap<>();
 
     public SqlData() {
@@ -223,7 +230,7 @@ public class SqlData {
     public static <T> SqlData classToSqlData(T object) throws IllegalArgumentException {
         SqlData data = new SqlData();
         boolean hasId = false;
-        for (Field field : object.getClass().getFields()) {
+        for (Field field : getCachedFields(object.getClass())) {
             try {
                 if (field.getType() == int.class || field.getType() == long.class) {
                     if ("id".equalsIgnoreCase(field.getName())) {
@@ -245,12 +252,16 @@ public class SqlData {
 
     public static <T> SqlData classToSqlDataAsId(T object) {
         SqlData data = new SqlData();
-        for (Field field : object.getClass().getFields()) {
+        for (Field field : getCachedFields(object.getClass())) {
             try {
                 data.put(field.getName(), field.getInt(object));
             } catch (Exception ignore) {
             }
         }
         return data;
+    }
+
+    private static Field[] getCachedFields(Class<?> clazz) {
+        return FIELD_CACHE.get(clazz);
     }
 }

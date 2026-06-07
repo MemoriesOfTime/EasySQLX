@@ -25,11 +25,14 @@
 hs_err_pid*
 
 .idea/
+.classpath
+.factorypath
+.project
+.settings/
 
 .DS_Store
 */.DS_Store
 
-src/test/
 target/
 /EasyMySQL.iml
 /out/

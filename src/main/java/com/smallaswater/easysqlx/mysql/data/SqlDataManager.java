@@ -12,11 +12,9 @@ import org.jetbrains.annotations.NotNull;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 
 /**
@@ -26,16 +24,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class SqlDataManager {
 
-    private static final LinkedBlockingQueue<Runnable> QUEUE = new LinkedBlockingQueue<>(5);
-
-    private static final ThreadPoolExecutor THREAD_POOL = new ThreadPoolExecutor(
-            5,
-            20,
-            60,
-            TimeUnit.SECONDS,
-            QUEUE,
-            new ThreadPoolExecutor.AbortPolicy()
-    );
+    private static final int BATCH_SIZE = 500;
 
     private SqlDataManager() {
         throw new RuntimeException();
@@ -68,18 +57,19 @@ public class SqlDataManager {
                                                      String having,
                                                      ChunkSqlType... types) {
         Objects.requireNonNull(loginPool);
-        if (!"".equalsIgnoreCase(column.trim())) {
+        if ("".equalsIgnoreCase(column.trim())) {
             throw new NullPointerException();
         }
-        if (!"".equalsIgnoreCase(tableName.trim())) {
+        if ("".equalsIgnoreCase(tableName.trim())) {
             throw new NullPointerException();
         }
+        boolean hasWhere = where != null && !"".equalsIgnoreCase(where.trim());
         String sql = "SELECT " + column + " FROM " + tableName;
-        if (where != null && !"".equalsIgnoreCase(where.trim())) {
+        if (hasWhere) {
             sql = sql + " WHERE " + where;
         }
         if (like != null && !"".equalsIgnoreCase(like.trim())) {
-            sql = sql + "LIKE " + like;
+            sql = sql + (hasWhere ? " LIKE " : " WHERE ") + like;
         }
         if (groupBy != null && !"".equalsIgnoreCase(groupBy.trim())) {
             sql = sql + " GROUP BY " + groupBy;
@@ -87,11 +77,11 @@ public class SqlDataManager {
         if (having != null && !"".equalsIgnoreCase(having.trim())) {
             sql = sql + " HAVING " + having;
         }
-        if (start != 0 && length != 0) {
-            sql = sql + " LIMIT " + start + "," + length;
-        }
         if (orderBy != null && !"".equalsIgnoreCase(orderBy.trim())) {
             sql = sql + " ORDER BY " + orderBy;
+        }
+        if (length != 0) {
+            sql = sql + " LIMIT " + start + "," + length;
         }
 
         return selectExecute(loginPool, sql, types);
@@ -158,45 +148,26 @@ public class SqlDataManager {
      */
     public static SqlDataList<SqlData> selectExecute(LoginPool loginPool, String commands, ChunkSqlType... types) {
         SqlDataList<SqlData> objects = new SqlDataList<>(commands, types);
-        PreparedStatement preparedStatement = null;
-        Connection connection = null;
-        try {
-            connection = loginPool.dataSource.getConnection();
-            preparedStatement = connection.prepareStatement(commands);
-            for (ChunkSqlType types1 : types) {
-                preparedStatement.setString(types1.getI(), types1.getValue());
-            }
-            ResultSet resultSet = preparedStatement.executeQuery();
-            if (resultSet != null) {
-                ResultSetMetaData data;
-                resultSet = preparedStatement.executeQuery();
+        try (Connection connection = loginPool.dataSource.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(commands)) {
+            bindParameters(preparedStatement, types);
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                ResultSetMetaData data = resultSet.getMetaData();
+                int columnCount = data.getColumnCount();
+                String[] columnNames = new String[columnCount];
+                for (int i = 1; i <= columnCount; i++) {
+                    columnNames[i - 1] = data.getColumnName(i).toLowerCase();
+                }
                 while (resultSet.next()) {
-                    data = preparedStatement.getMetaData();
-                    int columnCount = data.getColumnCount();
                     SqlData map = new SqlData();
-                    for (int i = 0; i < columnCount; i++) {
-                        map.put(data.getColumnName(i + 1).toLowerCase(), resultSet.getObject(i + 1));
+                    for (int i = 1; i <= columnCount; i++) {
+                        map.put(columnNames[i - 1], resultSet.getObject(i));
                     }
                     objects.add(map);
                 }
             }
         } catch (Exception e) {
             Server.getInstance().getLogger().error("执行 " + commands + " 语句出现异常", e);
-        } finally {
-            if (preparedStatement != null) {
-                try {
-                    preparedStatement.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (connection != null) {
-                try {
-                    connection.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
         }
         return objects;
     }
@@ -211,8 +182,8 @@ public class SqlDataManager {
      * @return 是否存在
      */
     public static boolean isExists(LoginPool loginPool, String tableName, String column, String data) {
-        String sql = "SELECT " + MySqlFunctions.getFunction(MySqlFunctions.SqlFunctions.COUNT, "*") + " c FROM " + tableName + " WHERE " + column + " = ?";
-        return selectExecute(loginPool, sql, new ChunkSqlType(1, data)).get().getInt("c") > 0;
+        String sql = "SELECT 1 FROM " + tableName + " WHERE " + column + " = ? LIMIT 1";
+        return selectExecute(loginPool, sql, new ChunkSqlType(1, data)).size() > 0;
     }
 
     /**
@@ -224,35 +195,14 @@ public class SqlDataManager {
      * 通过线程池调用 Connection
      */
     public static boolean executeSql(LoginPool loginPool, String sql, ChunkSqlType... value) {
-        Connection connection = null;
-        PreparedStatement preparedStatement = null;
-        try {
-            connection = loginPool.dataSource.getConnection();
-            preparedStatement = connection.prepareStatement(sql);
-            for (ChunkSqlType type : value) {
-                preparedStatement.setString(type.getI(), type.getValue());
-            }
+        try (Connection connection = loginPool.dataSource.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            bindParameters(preparedStatement, value);
             preparedStatement.execute();
-            preparedStatement.close();
             return true;
 
         } catch (SQLException e) {
             Server.getInstance().getLogger().error("执行 " + sql + " 语句出现异常", e);
-        } finally {
-            if (preparedStatement != null) {
-                try {
-                    preparedStatement.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (connection != null) {
-                try {
-                    connection.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
         }
         return false;
     }
@@ -302,14 +252,14 @@ public class SqlDataManager {
      * @param database  数据库名
      */
     public static boolean isTableColumnData(LoginPool loginPool, String database, String tableName) {
-        if (tableName != null && !"".equalsIgnoreCase(tableName.trim())) {
+        if (tableName == null || "".equalsIgnoreCase(tableName.trim())) {
             throw new NullPointerException();
         }
-        if (database != null && !"".equalsIgnoreCase(database.trim())) {
+        if (database == null || "".equalsIgnoreCase(database.trim())) {
             throw new NullPointerException();
         }
-        String command = "SELECT * FROM information_schema.TABLES  WHERE table_schema =? AND table_name = ?";
-        return selectExecute(loginPool, command, new ChunkSqlType(1, database), new ChunkSqlType(2, tableName)).size() == 0;
+        String command = "SELECT 1 FROM information_schema.TABLES WHERE table_schema = ? AND table_name = ? LIMIT 1";
+        return selectExecute(loginPool, command, new ChunkSqlType(1, database), new ChunkSqlType(2, tableName)).size() > 0;
     }
 
     /**
@@ -319,14 +269,17 @@ public class SqlDataManager {
      * @param where 参数判断
      */
     public static boolean setData(LoginPool loginPool, String tableName, SqlData data, SqlData where) {
+        if (data == null || data.getData().isEmpty() || where == null || where.getData().isEmpty()) {
+            return false;
+        }
         ArrayList<ChunkSqlType> objects = new ArrayList<>();
         int i = 1;
         for (Map.Entry<String, Object> data1 : data.getData().entrySet()) {
-            objects.add(new ChunkSqlType(i, data1.getValue().toString()));
+            objects.add(new ChunkSqlType(i, data1.getValue()));
             i++;
         }
         for (Map.Entry<String, Object> data1 : where.getData().entrySet()) {
-            objects.add(new ChunkSqlType(i, data1.getValue().toString()));
+            objects.add(new ChunkSqlType(i, data1.getValue()));
             i++;
         }
 
@@ -342,21 +295,16 @@ public class SqlDataManager {
      * @return 是否添加成功
      */
     public static boolean insertData(LoginPool loginPool, String tableName, SqlData data) {
-        String column = data.getColumnToString();
-        String values = data.getObjectToString();
-        StringBuilder builder = new StringBuilder("INSERT INTO ").append(tableName).append(" (").append(column).append(") VALUES (");
-        builder.append("?");
-        for (int i=1; i<data.getColumns().size(); i++) {
-            builder.append(",?");
-        }
-        builder.append(")");
+        List<String> columns = data.getColumns();
+        List<Object> objects = data.getObjects();
+        String sql = buildInsertSql(tableName, columns);
         ArrayList<ChunkSqlType> chunkSqlTypes = new ArrayList<>();
         int i = 1;
-        for (Object o : data.getObjects()) {
-            chunkSqlTypes.add(new ChunkSqlType(i, String.valueOf(o)));
+        for (Object o : objects) {
+            chunkSqlTypes.add(new ChunkSqlType(i, o));
             i++;
         }
-        return executeSql(loginPool, builder.toString(), chunkSqlTypes.toArray(new ChunkSqlType[0]));
+        return executeSql(loginPool, sql, chunkSqlTypes.toArray(new ChunkSqlType[0]));
     }
 
     /**
@@ -367,10 +315,98 @@ public class SqlDataManager {
      * @return 是否添加成功
      */
     public static boolean insertData(LoginPool loginPool, String tableName, LinkedList<SqlData> datas) {
-        for (SqlData data : datas) {
-            THREAD_POOL.execute(() -> insertData(loginPool, tableName, data));
+        if (datas == null || datas.isEmpty()) {
+            return true;
         }
-        return true;
+        SqlData first = datas.getFirst();
+        List<String> columns = first.getColumns();
+        String sql = buildInsertSql(tableName, columns);
+        Connection connection = null;
+        boolean originalAutoCommit = true;
+        try {
+            connection = loginPool.dataSource.getConnection();
+            originalAutoCommit = connection.getAutoCommit();
+            connection.setAutoCommit(false);
+            try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+                int batchCount = 0;
+                for (SqlData data : datas) {
+                    List<String> rowColumns = data.getColumns();
+                    if (!columns.equals(rowColumns)) {
+                        rollbackQuietly(connection);
+                        return false;
+                    }
+                    int index = 1;
+                    List<Object> objects = data.getObjects();
+                    for (Object value : objects) {
+                        preparedStatement.setObject(index, ChunkSqlType.normalizeSqlValue(value));
+                        index++;
+                    }
+                    preparedStatement.addBatch();
+                    batchCount++;
+                    if (batchCount == BATCH_SIZE) {
+                        preparedStatement.executeBatch();
+                        preparedStatement.clearBatch();
+                        batchCount = 0;
+                    }
+                }
+                if (batchCount > 0) {
+                    preparedStatement.executeBatch();
+                    preparedStatement.clearBatch();
+                }
+            }
+            connection.commit();
+            return true;
+        } catch (SQLException e) {
+            rollbackQuietly(connection);
+            Server.getInstance().getLogger().error("执行 " + sql + " 语句出现异常", e);
+        } finally {
+            restoreAutoCommitQuietly(connection, originalAutoCommit);
+            closeQuietly(connection);
+        }
+        return false;
+    }
+
+    private static String buildInsertSql(String tableName, List<String> columns) {
+        String column = String.join(",", columns);
+        StringBuilder builder = new StringBuilder("INSERT INTO ").append(tableName).append(" (").append(column).append(") VALUES (");
+        if (!columns.isEmpty()) {
+            builder.append("?");
+            for (int i = 1; i < columns.size(); i++) {
+                builder.append(",?");
+            }
+        }
+        builder.append(")");
+        return builder.toString();
+    }
+
+    private static void rollbackQuietly(Connection connection) {
+        if (connection == null) {
+            return;
+        }
+        try {
+            connection.rollback();
+        } catch (SQLException ignore) {
+        }
+    }
+
+    private static void restoreAutoCommitQuietly(Connection connection, boolean originalAutoCommit) {
+        if (connection == null) {
+            return;
+        }
+        try {
+            connection.setAutoCommit(originalAutoCommit);
+        } catch (SQLException ignore) {
+        }
+    }
+
+    private static void closeQuietly(Connection connection) {
+        if (connection == null) {
+            return;
+        }
+        try {
+            connection.close();
+        } catch (SQLException ignore) {
+        }
     }
 
     /**
@@ -390,10 +426,16 @@ public class SqlDataManager {
             } else {
                 cmd.append(column).append(" = ?");
             }
-            objects.add(new ChunkSqlType(i + 1, data.getData().get(column).toString()));
+            objects.add(new ChunkSqlType(i + 1, data.getData().get(column)));
             i++;
         }
 
         return executeSql(loginPool, cmd.toString(), objects.toArray(new ChunkSqlType[]{}));
+    }
+
+    private static void bindParameters(PreparedStatement preparedStatement, ChunkSqlType... value) throws SQLException {
+        for (ChunkSqlType type : value) {
+            preparedStatement.setObject(type.getI(), type.getSqlValue());
+        }
     }
 }

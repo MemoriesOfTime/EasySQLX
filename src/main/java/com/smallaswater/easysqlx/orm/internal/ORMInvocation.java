@@ -18,9 +18,10 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class ORMInvocation<T extends IDAO<?>> implements InvocationHandler {
+
+    private static final Map<Class<?>, Class<?>> DEFAULT_CLASS_CACHE = new WeakHashMap<>();
 
     private final SqlManager manager;
     private final String table;
@@ -32,6 +33,10 @@ public class ORMInvocation<T extends IDAO<?>> implements InvocationHandler {
     // 储存 name -> Field 的 map
     private final Map<String, Field> columnFields = new HashMap<>();
 
+    private final InsertMetadata insertMetadata;
+
+    private volatile boolean tableInitialized;
+
     public ORMInvocation(Class<T> clazz, String table, SqlManager manager) {
         this.manager = manager;
         this.table = table;
@@ -39,34 +44,45 @@ public class ORMInvocation<T extends IDAO<?>> implements InvocationHandler {
         this.entityClass = ((Class<?>) ((ParameterizedType) Arrays.stream(clazz.getGenericInterfaces())
                 .filter(t -> t.getTypeName().replaceAll("<\\S+>", "").endsWith("IDAO"))
                 .findFirst().get()).getActualTypeArguments()[0]);
+        this.insertMetadata = buildInsertMetadata();
         Class<?> defaultDoClass = generateDoDefaultClass();
-        try {
+        if (defaultDoClass != null) {
+            try {
 
-            this.defaultDoProxyObj = defaultDoClass.newInstance();
+                this.defaultDoProxyObj = defaultDoClass.newInstance();
 
-            // 依赖注入
-            Field m = defaultDoClass.getDeclaredField("manager");
-            m.setAccessible(true);
+                // 依赖注入
+                Field m = defaultDoClass.getDeclaredField("manager");
+                m.setAccessible(true);
 
-            m.set(this.defaultDoProxyObj, this.manager);
+                m.set(this.defaultDoProxyObj, this.manager);
 
-            Field t = defaultDoClass.getDeclaredField("table");
-            t.setAccessible(true);
-            t.set(this.defaultDoProxyObj, this.table);
+                Field t = defaultDoClass.getDeclaredField("table");
+                t.setAccessible(true);
+                t.set(this.defaultDoProxyObj, this.table);
 
-        } catch (Exception e) {
-            e.printStackTrace();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
-        Arrays.stream(entityClass.getDeclaredFields())
-                .filter( t -> t.isAnnotationPresent(Column.class))
-                .forEach( t -> {
-                    Column c = t.getAnnotation(Column.class);
-                    columnFields.put(c.name(), t);
-                });
     }
 
     // 使用 javassist 生成执行 Default 的类(继承代理的接口类)
     private Class<?> generateDoDefaultClass() {
+        synchronized (DEFAULT_CLASS_CACHE) {
+            Class<?> cachedClass = DEFAULT_CLASS_CACHE.get(this.clazz);
+            if (cachedClass != null) {
+                return cachedClass;
+            }
+            Class<?> generatedClass = createDoDefaultClass();
+            if (generatedClass != null) {
+                DEFAULT_CLASS_CACHE.put(this.clazz, generatedClass);
+            }
+            return generatedClass;
+        }
+    }
+
+    private Class<?> createDoDefaultClass() {
         ClassPool classPool = ClassPool.getDefault();
 
         classPool.insertClassPath(new ClassClassPath(this.getClass()));
@@ -83,11 +99,11 @@ public class ORMInvocation<T extends IDAO<?>> implements InvocationHandler {
         clazz.setInterfaces(new CtClass[]{interf});
 
         try {
-            clazz.addField(CtField.make("public com.smallaswater.easysql.mysql.manager.SqlManager manager;", clazz));
+            clazz.addField(CtField.make("public com.smallaswater.easysqlx.mysql.manager.SqlManager manager;", clazz));
             clazz.addField(CtField.make("public java.lang.String table;", clazz));
 
             // 构造被拦截的方法，模拟拦截
-            clazz.addMethod(CtMethod.make("public com.smallaswater.easysql.mysql.manager.SqlManager getManager(){return manager;}", clazz));
+            clazz.addMethod(CtMethod.make("public com.smallaswater.easysqlx.mysql.manager.SqlManager getManager(){return manager;}", clazz));
             clazz.addMethod(CtMethod.make("public java.lang.String getTable(){return table;}", clazz));
             clazz.addMethod(CtMethod.make("public java.lang.String toString(){return \"Table: \" + table + \" Manager: \" + manager;}", clazz));
 
@@ -99,12 +115,25 @@ public class ORMInvocation<T extends IDAO<?>> implements InvocationHandler {
         Class<?> ret = null;
         try {
 
-            ret = clazz.toClass(this.getClass().getClassLoader(), null);
+            ret = toClass(clazz);
 
         } catch (Exception e) {
             e.printStackTrace();
         }
         return ret;
+    }
+
+    private Class<?> toClass(CtClass generatedClass) throws Exception {
+        if (isLegacyJavaRuntime()) {
+            return generatedClass.toClass(this.clazz.getClassLoader(), this.clazz.getProtectionDomain());
+        }
+        Method toClass = CtClass.class.getMethod("toClass", Class.class);
+        return (Class<?>) toClass.invoke(generatedClass, this.clazz);
+    }
+
+    private boolean isLegacyJavaRuntime() {
+        String version = System.getProperty("java.specification.version");
+        return version != null && version.startsWith("1.");
     }
 
     private Field findField(String identifier) {
@@ -140,7 +169,7 @@ public class ORMInvocation<T extends IDAO<?>> implements InvocationHandler {
         method.setAccessible(true);
 
         if (method.isAnnotationPresent(DoInsert.class)) {
-            if (method.getParameterCount() != 1 && !method.getParameterTypes()[0].getName().equals(this.entityClass.getName())) {
+            if (method.getParameterCount() != 1 || !method.getParameterTypes()[0].getName().equals(this.entityClass.getName())) {
                 throw new RuntimeException("@DoInsert 修饰的方法只能有一个参数并且为范型类型!");
             }
             handleInsert(args);
@@ -219,55 +248,78 @@ public class ORMInvocation<T extends IDAO<?>> implements InvocationHandler {
 
     private void handleInsert(Object[] args) {
         Object entity = args[0];
+        ensureTableInitialized();
+
+        SqlData data = new SqlData();
+        for (InsertColumn column : insertMetadata.columns) {
+            try {
+                Object value = column.field.get(entity);
+                if (column.autoUUIDGenerate) {
+                    value = UUID.randomUUID().toString();
+                }
+                if (column.insertable && value != null) {
+                    data.put(column.name, value);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        this.manager.insertData(this.table, data);
+    }
+
+    private void ensureTableInitialized() {
+        if (tableInitialized) {
+            return;
+        }
+        synchronized (this) {
+            if (!tableInitialized) {
+                tableInitialized = this.manager.executeSql(insertMetadata.createSQL);
+            }
+        }
+    }
+
+    private InsertMetadata buildInsertMetadata() {
         StringBuilder sb = new StringBuilder();
         Map<String, List<String>> uniqueConstraints = new LinkedHashMap<>(); // 联合唯一键
-        AtomicReference<String> pkConstraintName = new AtomicReference<>(""); // 联合主键
+        String pkConstraintName = ""; // 联合主键
         List<String> pkConstraints = new ArrayList<>();
         Map<String, String> foreignKeys = new LinkedHashMap<>(); // 外键
 
-        SqlData data = new SqlData();
+        List<InsertColumn> columns = new ArrayList<>();
 
-        Arrays.stream(this.entityClass.getDeclaredFields())
-                .filter(it -> it.isAnnotationPresent(Column.class))
-                .forEach(it -> {
-                    Column column = it.getAnnotation(Column.class);
-                    String option = getOption(column.kind().toString(), column.options());
+        for (Field field : this.entityClass.getDeclaredFields()) {
+            if (!field.isAnnotationPresent(Column.class)) {
+                continue;
+            }
+            field.setAccessible(true);
+            Column column = field.getAnnotation(Column.class);
+            String option = getOption(column.kind().toString(), column.options());
+            columnFields.put(column.name(), field);
+            columnFields.put(column.name().toLowerCase(), field);
 
-                    if (it.isAnnotationPresent(Constraint.class)) {
-                        Constraint constraint = it.getAnnotation(Constraint.class);
-                        switch (constraint.type()) {
-                            case UNIQUE:
-                                uniqueConstraints.putIfAbsent(constraint.name(), new ArrayList<>());
-                                uniqueConstraints.get(constraint.name()).add(column.name());
-                                break;
-                            case PRIMARY:
-                                pkConstraintName.set(constraint.name());
-                                pkConstraints.add(column.name());
-                                break;
-                        }
-                    }
+            if (field.isAnnotationPresent(Constraint.class)) {
+                Constraint constraint = field.getAnnotation(Constraint.class);
+                switch (constraint.type()) {
+                    case UNIQUE:
+                        uniqueConstraints.putIfAbsent(constraint.name(), new ArrayList<>());
+                        uniqueConstraints.get(constraint.name()).add(column.name());
+                        break;
+                    case PRIMARY:
+                        pkConstraintName = constraint.name();
+                        pkConstraints.add(column.name());
+                        break;
+                }
+            }
 
-                    if (it.isAnnotationPresent(ForeignKey.class)) {
-                        ForeignKey foreignKey = it.getAnnotation(ForeignKey.class);
-                        foreignKeys.put(column.name(), foreignKey.tableName()+"("+foreignKey.columnName()+")");
-                    }
+            if (field.isAnnotationPresent(ForeignKey.class)) {
+                ForeignKey foreignKey = field.getAnnotation(ForeignKey.class);
+                foreignKeys.put(column.name(), foreignKey.tableName()+"("+foreignKey.columnName()+")");
+            }
 
-                    sb.append(column.name()).append(" ").append(option).append(",");
-
-
-                    try {
-                        Object value = it.get(entity);
-                        if (it.isAnnotationPresent(AutoUUIDGenerate.class)) {
-                            value = UUID.randomUUID().toString();  // 自动生成 uuid
-                        }
-                        if (!option.contains("auto_increment") && value != null) { // 跳过自增键和空值
-                            data.put(column.name(), value);
-                        }
-
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                });
+            sb.append(column.name()).append(" ").append(option).append(",");
+            columns.add(new InsertColumn(column.name(), option, field, field.isAnnotationPresent(AutoUUIDGenerate.class)));
+        }
         for (Map.Entry<String, List<String>> entry : uniqueConstraints.entrySet()) {
             sb.append("constraint").append(" ").append(entry.getKey())
                     .append(" ").append("unique").append("(")
@@ -276,8 +328,8 @@ public class ORMInvocation<T extends IDAO<?>> implements InvocationHandler {
                     .append("),");
         }
 
-        if (!pkConstraintName.get().equals("")) {
-            sb.append("constraint").append(" ").append(pkConstraintName.get())
+        if (!pkConstraintName.equals("")) {
+            sb.append("constraint").append(" ").append(pkConstraintName)
                     .append(" ").append("primary key").append("(")
                     .append(Arrays.toString(pkConstraints.toArray(new String[0]))
                             .replace("[", "").replace("]", ""))
@@ -290,9 +342,31 @@ public class ORMInvocation<T extends IDAO<?>> implements InvocationHandler {
         }
 
         String createSQL = "create table if not exists "+this.table+"("+sb.substring(0, sb.length()-1)+")ENGINE=InnoDB DEFAULT CHARSET=utf8;";
-        this.manager.executeSql(createSQL);
+        return new InsertMetadata(createSQL, columns);
+    }
 
-        this.manager.insertData(this.table, data);
+    private static final class InsertMetadata {
+        private final String createSQL;
+        private final List<InsertColumn> columns;
+
+        private InsertMetadata(String createSQL, List<InsertColumn> columns) {
+            this.createSQL = createSQL;
+            this.columns = columns;
+        }
+    }
+
+    private static final class InsertColumn {
+        private final String name;
+        private final Field field;
+        private final boolean autoUUIDGenerate;
+        private final boolean insertable;
+
+        private InsertColumn(String name, String option, Field field, boolean autoUUIDGenerate) {
+            this.name = name;
+            this.field = field;
+            this.autoUUIDGenerate = autoUUIDGenerate;
+            this.insertable = !option.contains("auto_increment");
+        }
     }
 
     private void handleExecute(String sql, Object[] args) {
@@ -325,7 +399,7 @@ public class ORMInvocation<T extends IDAO<?>> implements InvocationHandler {
         }
         ArrayList<ChunkSqlType> chunks = new ArrayList<>();
         for (int i = 1; i <= args.length; i++) {
-            ChunkSqlType chunk = new ChunkSqlType(i, args[i - 1].toString());
+            ChunkSqlType chunk = new ChunkSqlType(i, args[i - 1]);
             chunks.add(chunk);
         }
         return chunks;
@@ -339,10 +413,12 @@ public class ORMInvocation<T extends IDAO<?>> implements InvocationHandler {
                     if (!optionBuilder.toString().contains("primary key")) {
                         optionBuilder.append(" primary key");
                     }
+                    break;
                 case UNIQUE:
                     if (!optionBuilder.toString().contains("unique")) {
                         optionBuilder.append(" unique");
                     }
+                    break;
                 case NULL:
                     optionBuilder = new StringBuilder(optionBuilder.toString().replace("not null", "null")); // 覆盖 Types 里的选项
                     if (!optionBuilder.toString().contains("null")) {

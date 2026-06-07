@@ -76,13 +76,13 @@ public class UseTableSqlManager extends SqlManager {
      * @return 删除一个字段
      */
     public boolean deleteColumn(String args) {
-        return super.deleteColumn(args, this.tableName);
+        return super.deleteColumn(this.tableName, args);
     }
 
     @Deprecated //对于UseTableSqlManager来说不推荐使用此方法
     @Override
-    public boolean deleteColumn(@NotNull String args, String tableName) {
-        return super.deleteColumn(args, tableName);
+    public boolean deleteColumn(@NotNull String tableName, String args) {
+        return super.deleteColumn(tableName, args);
     }
 
     /**

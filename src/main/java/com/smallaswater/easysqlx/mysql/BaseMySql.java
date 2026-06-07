@@ -43,7 +43,8 @@ public abstract class BaseMySql {
         this.plugin = plugin;
         this.data = data;
         if (connectionParameters == null || connectionParameters.trim().isEmpty()) {
-            this.connectionParameters = "failOverReadOnly=false&serverTimezone=GMT&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true";
+            this.connectionParameters = "failOverReadOnly=false&serverTimezone=GMT&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true" +
+                    "&cachePrepStmts=true&prepStmtCacheSize=250&prepStmtCacheSqlLimit=2048&useServerPrepStmts=true&rewriteBatchedStatements=true";
         } else {
             this.connectionParameters = connectionParameters;
         }
@@ -173,11 +174,15 @@ public abstract class BaseMySql {
      */
     public boolean isExistTable(@NotNull String tableName) {
         String sql = "SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?";
-        try (Connection connection = this.getConnection();
-             PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setString(1, rawTableName(tableName));
-            try (ResultSet resultSet = ps.executeQuery()) {
-                return resultSet.next();
+        try (Connection connection = this.getConnection()) {
+            if (connection == null) {
+                return false;
+            }
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                ps.setString(1, rawTableName(tableName));
+                try (ResultSet resultSet = ps.executeQuery()) {
+                    return resultSet.next();
+                }
             }
         } catch (SQLException e) {
             return false;
@@ -233,12 +238,16 @@ public abstract class BaseMySql {
      */
     public boolean isExistColumn(@NotNull String tableName, @NotNull String column) {
         String sql = "SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?";
-        try (Connection connection = this.getConnection();
-             PreparedStatement ps = connection.prepareStatement(sql)) {
-            ps.setString(1, rawTableName(tableName));
-            ps.setString(2, column);
-            try (ResultSet resultSet = ps.executeQuery()) {
-                return resultSet.next();
+        try (Connection connection = this.getConnection()) {
+            if (connection == null) {
+                return false;
+            }
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                ps.setString(1, rawTableName(tableName));
+                ps.setString(2, column);
+                try (ResultSet resultSet = ps.executeQuery()) {
+                    return resultSet.next();
+                }
             }
         } catch (SQLException e) {
             return false;
@@ -260,12 +269,12 @@ public abstract class BaseMySql {
     /**
      * 给表删除字段
      *
-     * @param args      字段名
      * @param tableName 表单名称
+     * @param args      字段名
      * @return 删除一个字段
      */
     public boolean deleteColumn(@NotNull String tableName, String args) {
-        return this.executeSql("ALTER TABLE " + conversionTableName(tableName) + " DROP ?", new ChunkSqlType(1, args));
+        return this.executeSql("ALTER TABLE " + conversionTableName(tableName) + " DROP " + conversionTableName(args));
     }
 
     /**
@@ -335,7 +344,7 @@ public abstract class BaseMySql {
 
             // 设置 SQL 参数
             for (ChunkSqlType type : sqlType) {
-                preparedStatement.setString(type.getI(), type.getValue());
+                preparedStatement.setObject(type.getI(), type.getSqlValue());
             }
 
             // 执行查询并获取结果
@@ -376,9 +385,22 @@ public abstract class BaseMySql {
      * @return 数据
      */
     public SqlDataList<SqlData> getData(@NotNull String tableName, @NotNull SelectType selectType) {
+        return getData(tableName, selectType, 0, 0);
+    }
+
+    /**
+     * 获取限制条数的数据
+     *
+     * @param tableName  表名称
+     * @param selectType 查询条件
+     * @param start      开始位置
+     * @param length     查询条数，非正数表示不限制
+     * @return 数据
+     */
+    public SqlDataList<SqlData> getData(@NotNull String tableName, @NotNull SelectType selectType, int start, int length) {
         ArrayList<ChunkSqlType> chunkSqlTypes = new ArrayList<>();
         chunkSqlTypes.add(new ChunkSqlType(1, selectType.getValue()));
-        String command = "SELECT * FROM " + conversionTableName(tableName) + " " + selectType;
+        String command = "SELECT * FROM " + conversionTableName(tableName) + " " + selectType + buildLimitClause(start, length);
         return this.getData(command, chunkSqlTypes.toArray(new ChunkSqlType[0]));
     }
 
@@ -402,6 +424,20 @@ public abstract class BaseMySql {
      * @return 数据
      */
     public SqlDataList<SqlData> getData(@NotNull String tableName, String column, @NotNull SqlData data) {
+        return getData(tableName, column, data, 0, 0);
+    }
+
+    /**
+     * 获取限制条数的数据
+     *
+     * @param tableName 表名称
+     * @param column    要查询的字段
+     * @param data      查询条件内容
+     * @param start     开始位置
+     * @param length    查询条数，非正数表示不限制
+     * @return 数据
+     */
+    public SqlDataList<SqlData> getData(@NotNull String tableName, String column, @NotNull SqlData data, int start, int length) {
         if (column == null || column.trim().isEmpty()) {
             column = "*";
         }
@@ -413,13 +449,13 @@ public abstract class BaseMySql {
                 sqlCommand.append(" AND ");
             }
             sqlCommand.append(sqlData.getKey()).append("=?");
-            chunkSqlTypes.add(new ChunkSqlType(i, sqlData.getValue().toString()));
+            chunkSqlTypes.add(new ChunkSqlType(i, sqlData.getValue()));
             i++;
         }
         if (data.getData().isEmpty()) {
-            return this.getAllData(tableName, column);
+            return this.getAllData(tableName, column, start, length);
         }
-        String command = "SELECT " + column + " FROM " + conversionTableName(tableName) + " WHERE " + sqlCommand;
+        String command = "SELECT " + column + " FROM " + conversionTableName(tableName) + " WHERE " + sqlCommand + buildLimitClause(start, length);
         return this.getData(command, chunkSqlTypes.toArray(new ChunkSqlType[0]));
     }
 
@@ -431,11 +467,32 @@ public abstract class BaseMySql {
      * @return 包含查询结果的SqlDataList对象
      */
     public SqlDataList<SqlData> getAllData(@NotNull String tableName, String column) {
+        return getAllData(tableName, column, 0, 0);
+    }
+
+    /**
+     * 从指定表中获取限制条数的数据
+     *
+     * @param tableName 目标表名（非空）
+     * @param column    需要查询的列名，当为null/空字符串时会查询所有列（自动转换为*）
+     * @param start     开始位置
+     * @param length    查询条数，非正数表示不限制
+     * @return 包含查询结果的SqlDataList对象
+     */
+    public SqlDataList<SqlData> getAllData(@NotNull String tableName, String column, int start, int length) {
         if (column == null || column.trim().isEmpty()) {
             column = "*";
         }
-        String command = "SELECT " + column + " FROM " + conversionTableName(tableName);
+        String command = "SELECT " + column + " FROM " + conversionTableName(tableName) + buildLimitClause(start, length);
         return this.getData(command);
+    }
+
+    @NotNull
+    private static String buildLimitClause(int start, int length) {
+        if (length <= 0) {
+            return "";
+        }
+        return " LIMIT " + Math.max(start, 0) + "," + length;
     }
 
     /**
